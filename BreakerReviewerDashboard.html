@@ -23,8 +23,12 @@
     const SUBITEMS_BOARD_ID = 18426331487;
     const SLOT_BOARD_ID     = 18422871700;
     const SUMMARY_BOARD_ID  = 18426507360;
-    const SUMMARY_ITEM = { "145": 12798947432, "245": 12798972935, "362": 12798947735 };
-    const SUMMARY_COL  = { available: "numeric_mm66a4e7", reserved: "numeric_mm66w5v7" };
+    const SUMMARY_ITEM = {
+      "145": { available: 12799154965, reserved: 12799161604 },
+      "245": { available: 12799175418, reserved: 12799161594 },
+      "362": { available: 12799148221, reserved: 12799138949 },
+    };
+    const SUMMARY_COL  = { count: "numeric_mm662sje" };
 
     async function gql(apiKey, query, variables = {}) {
       const res = await fetch(MONDAY_API, {
@@ -186,9 +190,13 @@
             const forV = allSubItems.filter(si => si.column_values.find(c=>c.id==="dropdown_mm65b542")?.text === v);
             const avail2 = forV.filter(si => si.column_values.find(c=>c.id==="status")?.text === "Available").length;
             const resv2  = forV.filter(si => si.column_values.find(c=>c.id==="status")?.text === "Reserved").length;
-            const sid = SUMMARY_ITEM[v];
-            if (sid) await gql(apiKey, `mutation($itemId:ID!,$boardId:ID!,$cv:JSON!){ change_multiple_column_values(item_id:$itemId,board_id:$boardId,column_values:$cv){ id } }`,
-              { itemId:String(sid), boardId:String(SUMMARY_BOARD_ID), cv:JSON.stringify({ [SUMMARY_COL.available]:avail2, [SUMMARY_COL.reserved]:resv2 }) });
+            const sids = SUMMARY_ITEM[v];
+            if (sids) {
+              await gql(apiKey, `mutation($itemId:ID!,$boardId:ID!,$cv:JSON!){ change_multiple_column_values(item_id:$itemId,board_id:$boardId,column_values:$cv){ id } }`,
+                { itemId:String(sids.available), boardId:String(SUMMARY_BOARD_ID), cv:JSON.stringify({ [SUMMARY_COL.count]:avail2 }) });
+              await gql(apiKey, `mutation($itemId:ID!,$boardId:ID!,$cv:JSON!){ change_multiple_column_values(item_id:$itemId,board_id:$boardId,column_values:$cv){ id } }`,
+                { itemId:String(sids.reserved), boardId:String(SUMMARY_BOARD_ID), cv:JSON.stringify({ [SUMMARY_COL.count]:resv2 }) });
+            }
           }
           setSyncMsg(`✓ Synced ${updated} PO lines and capacity summary — all counts reflect actual subitem statuses.`);
           setTimeout(()=>setSyncMsg(""), 6000);
@@ -231,8 +239,8 @@
             // Recount subitems by voltage to update the summary board
             const voltages = ["145", "245", "362"];
             for (const v of voltages) {
-              const itemId = SUMMARY_ITEM[v];
-              if (!itemId) continue;
+              const vRowIds = SUMMARY_ITEM[v];
+              if (!vRowIds) continue;
               // Count available and reserved subitems for this voltage
               const vData = await gql(apiKey, `{ boards(ids:[${SUBITEMS_BOARD_ID}]) { items_page(limit:200) { items { column_values(ids:["status","dropdown_mm65b542"]) { id text } } } } }`);
               const vItems = vData.boards[0].items_page.items;
@@ -240,7 +248,9 @@
               const avail = forVoltage.filter(si => si.column_values.find(c=>c.id==="status")?.text === "Available").length;
               const resv  = forVoltage.filter(si => si.column_values.find(c=>c.id==="status")?.text === "Reserved").length;
               await gql(apiKey, `mutation($itemId:ID!,$boardId:ID!,$cv:JSON!){ change_multiple_column_values(item_id:$itemId,board_id:$boardId,column_values:$cv){ id } }`,
-                { itemId:String(itemId), boardId:String(SUMMARY_BOARD_ID), cv:JSON.stringify({ [SUMMARY_COL.available]:avail, [SUMMARY_COL.reserved]:resv }) });
+                { itemId:String(vRowIds.available), boardId:String(SUMMARY_BOARD_ID), cv:JSON.stringify({ [SUMMARY_COL.count]:avail }) });
+              await gql(apiKey, `mutation($itemId:ID!,$boardId:ID!,$cv:JSON!){ change_multiple_column_values(item_id:$itemId,board_id:$boardId,column_values:$cv){ id } }`,
+                { itemId:String(vRowIds.reserved), boardId:String(SUMMARY_BOARD_ID), cv:JSON.stringify({ [SUMMARY_COL.count]:resv }) });
             }
           } catch(e) { errs.push("Summary board sync: "+e.message); }
 
