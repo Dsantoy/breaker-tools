@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Breaker Slot Request — Burns &amp; McDonnell</title>
+  <title>BSF Review Dashboard — Burns &amp; McDonnell</title>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -13,142 +13,152 @@
     select, input, textarea, button { font-family: inherit; }
 
     /* Header */
-    .bmcd-header { background: #002D59; position: relative; overflow: hidden; padding: 28px 36px 40px; }
-    .bmcd-header::before { content:''; position:absolute; top:0; left:0; right:0; bottom:0;
-      background-image: repeating-linear-gradient(-55deg,transparent,transparent 18px,rgba(0,73,205,0.35) 18px,rgba(0,73,205,0.35) 22px);
+    .bmcd-header { background: #002D59; position: relative; overflow: hidden; padding: 20px 36px; display: flex; align-items: center; justify-content: space-between; }
+    .bmcd-header::before { content:''; position:absolute; top:0;left:0;right:0;bottom:0;
+      background-image: repeating-linear-gradient(-55deg,transparent,transparent 18px,rgba(0,73,205,0.3) 18px,rgba(0,73,205,0.3) 22px);
       pointer-events:none; }
-    .bmcd-header-inner { position:relative; z-index:1; }
-    .bmcd-logo-row { display:flex; align-items:center; gap:14px; margin-bottom:26px; }
-    .bmcd-logo-wordmark { color:#fff; }
-    .bmcd-logo-wordmark .brand { font-size:16px; font-weight:800; letter-spacing:.05em; display:block; line-height:1.1; }
-    .bmcd-logo-wordmark .est { font-size:9px; letter-spacing:.18em; color:rgba(255,255,255,.55); font-weight:400; margin-top:3px; display:block; }
-    .bmcd-eyebrow { font-size:10px; font-weight:700; letter-spacing:.14em; color:#E6F001; text-transform:uppercase; margin-bottom:10px; }
-    .bmcd-hero-title { font-size:28px; font-weight:800; color:#fff; line-height:1.18; margin-bottom:4px; }
-    .bmcd-hero-title span { color:#E6F001; }
-    .bmcd-neon-bar { width:44px; height:4px; background:#E6F001; margin:12px 0 10px; border-radius:2px; }
-    .bmcd-hero-sub { font-size:12px; color:rgba(255,255,255,.62); max-width:520px; line-height:1.55; }
+    .bmcd-header-left { position:relative; z-index:1; display:flex; align-items:center; gap:14px; }
+    .bmcd-header-right { position:relative; z-index:1; display:flex; gap:10px; }
+    .bmcd-logo-wrap { background:rgba(255,255,255,.1); border-radius:10px; width:42px; height:42px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .bmcd-title { color:#fff; font-size:18px; font-weight:800; letter-spacing:.02em; }
+    .bmcd-title-sub { color:rgba(255,255,255,.55); font-size:11px; margin-top:2px; letter-spacing:.04em; }
+    .btn-header-outline { background:rgba(255,255,255,.1); color:#fff; border:1.5px solid rgba(255,255,255,.25); border-radius:7px; padding:8px 16px; font-size:12px; font-weight:600; cursor:pointer; }
+    .btn-header-outline:disabled { opacity:.5; cursor:wait; }
+    .btn-header-neon { background:#E6F001; color:#002D59; border:none; border-radius:7px; padding:8px 16px; font-size:12px; font-weight:800; cursor:pointer; }
+    .btn-header-neon:disabled { opacity:.5; cursor:wait; }
 
-    /* Step indicator */
-    .bmcd-steps { background:#0049CD; padding:0 36px; display:flex; align-items:center; }
-    .bmcd-step { display:flex; align-items:center; gap:9px; padding:13px 0; padding-right:28px; position:relative; }
-    .bmcd-step.active::after { content:''; position:absolute; bottom:0; left:0; right:0; height:3px; background:#E6F001; border-radius:2px 2px 0 0; }
-    .bmcd-step-num { width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; flex-shrink:0; }
-    .bmcd-step.active .bmcd-step-num { background:#E6F001; color:#002D59; }
-    .bmcd-step.inactive .bmcd-step-num { background:rgba(255,255,255,.2); color:rgba(255,255,255,.55); }
-    .bmcd-step-lbl { font-size:11px; font-weight:600; }
-    .bmcd-step.active .bmcd-step-lbl { color:#fff; }
-    .bmcd-step.inactive .bmcd-step-lbl { color:rgba(255,255,255,.45); }
-    .bmcd-step-div { width:20px; height:1px; background:rgba(255,255,255,.25); margin-right:14px; }
+    /* Stats bar */
+    .stats-bar { background:#0049CD; padding:0 36px; display:flex; }
+    .stat-item { padding:13px 32px 13px 0; border-right:1px solid rgba(255,255,255,.15); margin-right:32px; }
+    .stat-item:last-child { border-right:none; }
+    .stat-num { font-size:22px; font-weight:800; color:#E6F001; line-height:1; }
+    .stat-lbl { font-size:9px; font-weight:700; color:rgba(255,255,255,.6); letter-spacing:.1em; text-transform:uppercase; margin-top:3px; }
 
-    /* Cards */
-    .bmcd-card { background:#fff; border-radius:12px; padding:22px 26px; border:1px solid #D4DCE6; box-shadow:0 2px 14px rgba(0,45,89,.07); margin-bottom:18px; }
-    .bmcd-card-hdr { display:flex; align-items:center; gap:12px; margin-bottom:20px; padding-bottom:14px; border-bottom:1px solid #E8EDF4; }
-    .bmcd-card-icon { width:36px; height:36px; border-radius:8px; background:#EEF3FC; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-    .bmcd-card-title { font-size:14px; font-weight:700; color:#002D59; }
-    .bmcd-card-sub { font-size:11px; color:#A1AFB3; margin-top:1px; }
-    .bmcd-step-tag { font-size:9px; font-weight:700; letter-spacing:.1em; color:#0049CD; background:#EEF3FC; padding:2px 8px; border-radius:4px; margin-left:auto; }
+    /* Main */
+    .bmcd-main { padding:24px 36px; max-width:880px; margin:0 auto; }
+    .section-row { display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+    .section-title { font-size:14px; font-weight:700; color:#002D59; }
+    .count-pill { font-size:11px; font-weight:700; padding:2px 9px; border-radius:99px; }
+    .count-pill.amber { background:#FEF3C7; color:#92400E; }
+    .count-pill.green { background:#DCFCE7; color:#166534; }
+    .count-pill.gray  { background:#F1F5F9; color:#64748B; }
 
-    /* Field labels */
-    .bmcd-lbl { display:block; font-size:10px; font-weight:700; color:#4D6680; letter-spacing:.07em; text-transform:uppercase; margin-bottom:5px; }
-    .bmcd-req { color:#DC2626; margin-left:2px; }
+    /* Request cards */
+    .req-card { background:#fff; border-radius:12px; border:1px solid #D4DCE6; box-shadow:0 2px 14px rgba(0,45,89,.07); margin-bottom:16px; overflow:hidden; }
+    .req-card-top { padding:18px 22px; border-bottom:1px solid #EEF2F7; display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+    .req-opp { font-size:16px; font-weight:800; color:#002D59; }
+    .req-proj { font-size:13px; color:#4D6680; margin-top:3px; }
+    .req-client { color:#94A3B8; }
+    .pill { font-size:10px; font-weight:700; padding:3px 10px; border-radius:99px; white-space:nowrap; flex-shrink:0; display:inline-flex; align-items:center; }
+    .pill-pending  { background:#FEF3C7; color:#92400E; }
+    .pill-approved { background:#DCFCE7; color:#166534; }
+    .pill-denied   { background:#FEE2E2; color:#991B1B; }
+    .pill-cap-ok   { background:#EEF3FC; color:#0049CD; }
+    .pill-cap-warn { background:#FEF2F2; color:#991B1B; }
 
-    /* PO Line slot cards */
-    .slot-card { display:flex; align-items:center; gap:10px; padding:11px 14px; border-radius:8px; margin-bottom:5px; cursor:pointer; border:1.5px solid transparent; transition:all .15s; }
-    .slot-card.sel { background:#EEF3FC; border-color:#0049CD; }
-    .slot-card.unsel { background:#F6F8FA; border-color:#D4DCE6; }
-    .slot-card.unsel:hover { background:#EEF3FC; border-color:#B0C4E8; }
-    .vbadge { font-size:9px; font-weight:800; padding:3px 8px; border-radius:5px; flex-shrink:0; letter-spacing:.05em; }
-    .v145 { background:#E6F0FF; color:#0049CD; }
-    .v245 { background:#E0F5FF; color:#006699; }
-    .v362 { background:#FFF8E6; color:#A06B00; }
-    .slot-name { font-size:12px; font-weight:600; color:#002D59; }
-    .slot-meta { font-size:11px; color:#A1AFB3; margin-top:1px; }
-    .slot-avail { margin-left:auto; font-size:10px; font-weight:700; color:#1A9B5A; background:#E6F9EE; padding:2px 9px; border-radius:20px; flex-shrink:0; white-space:nowrap; }
-    .slot-avail.zero { color:#64748b; background:#F1F5F9; }
+    /* Meta grid */
+    .meta-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px 16px; padding:14px 22px; background:#F8FAFC; border-bottom:1px solid #EEF2F7; }
+    .meta-lbl { font-size:9px; font-weight:700; color:#94A3B8; letter-spacing:.1em; text-transform:uppercase; margin-bottom:3px; }
+    .meta-val { font-size:12px; font-weight:600; color:#002D59; }
 
-    /* Voltage group header */
-    .vgrp-hdr { font-size:9px; font-weight:700; letter-spacing:.12em; color:#94A3B8; text-transform:uppercase; padding:6px 0 3px; margin-top:6px; }
+    /* Breaker list */
+    .breaker-section { padding:14px 22px; border-bottom:1px solid #EEF2F7; }
+    .breaker-lbl { font-size:9px; font-weight:700; color:#94A3B8; letter-spacing:.1em; text-transform:uppercase; margin-bottom:8px; }
+    .breaker-row { display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:7px; margin-bottom:4px; }
+    .breaker-row.avail { background:#F0FDF4; border:1px solid #BBF7D0; }
+    .breaker-row.reserved-state { background:#FEF2F2; border:1px solid #FECACA; }
+    .breaker-row.unknown { background:#F8FAFC; border:1px solid #D4DCE6; }
+    .breaker-name { font-size:12px; font-weight:600; color:#002D59; flex:1; }
+    .breaker-meta-text { font-size:11px; color:#94A3B8; margin-top:1px; }
+    .b-pill { font-size:10px; font-weight:700; padding:2px 8px; border-radius:99px; flex-shrink:0; }
+    .b-pill.g { background:#DCFCE7; color:#166534; }
+    .b-pill.r { background:#FEE2E2; color:#991B1B; }
+    .b-pill.u { background:#F1F5F9; color:#64748B; }
 
-    /* Capacity bar */
-    .cap-wrap { background:#F0F4F8; border-radius:8px; padding:12px 14px; margin:10px 0 16px; }
-    .cap-row { display:flex; justify-content:space-between; font-size:10px; font-weight:600; color:#4D6680; margin-bottom:7px; }
-    .cap-green { color:#1A9B5A; }
-    .cap-track { height:7px; background:#D4DCE6; border-radius:99px; overflow:hidden; }
-    .cap-fill { height:100%; background:linear-gradient(90deg,#0049CD,#0066FF); border-radius:99px; }
+    /* Actions */
+    .action-bar { padding:14px 22px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    .btn-approve { background:#1A9B5A; color:#fff; border:none; border-radius:7px; padding:10px 22px; font-size:13px; font-weight:700; cursor:pointer; }
+    .btn-approve:disabled { background:#94A3B8; cursor:not-allowed; }
+    .btn-deny { background:#DC2626; color:#fff; border:none; border-radius:7px; padding:10px 22px; font-size:13px; font-weight:700; cursor:pointer; }
+    .btn-deny:disabled { background:#94A3B8; cursor:not-allowed; }
+    .btn-view-link { background:none; color:#0049CD; border:none; font-size:12px; font-weight:600; cursor:pointer; text-decoration:underline; margin-left:auto; }
 
-    /* Counter banner */
-    .counter { background:linear-gradient(90deg,#0049CD,#0066FF); border-radius:8px; padding:12px 16px; display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
-    .c-lbl { font-size:11px; color:rgba(255,255,255,.75); margin-bottom:1px; }
-    .c-num { font-size:21px; font-weight:800; color:#E6F001; line-height:1; }
-    .c-of { font-size:12px; font-weight:400; color:rgba(255,255,255,.5); margin-left:4px; }
-    .c-price-lbl { font-size:10px; color:rgba(255,255,255,.6); text-align:right; }
-    .c-price { font-size:15px; font-weight:700; color:#fff; text-align:right; }
-
-    /* Breaker items */
-    .bi { display:flex; align-items:center; gap:11px; padding:11px 14px; border-radius:8px; margin-bottom:4px; border:1.5px solid transparent; cursor:pointer; transition:background .1s; }
-    .bi.chk { background:#E6F9EE; border-color:#6DD19A; }
-    .bi.unchk { background:#F6F8FA; border-color:#D4DCE6; }
-    .bi.unchk:hover { background:#F0F4F8; }
-    .cbox { width:18px; height:18px; border-radius:5px; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
-    .cbox.on { background:#1A9B5A; }
-    .cbox.off { background:#fff; border:2px solid #B4C4D4; }
-
-    /* Submit area */
-    .submit-zone { background:#002D59; border-radius:12px; padding:22px 26px; margin-bottom:16px; }
-    .submit-inner { display:flex; align-items:center; justify-content:space-between; gap:20px; }
-    .submit-text { color:rgba(255,255,255,.7); font-size:12px; line-height:1.6; max-width:420px; }
-    .submit-text strong { color:#E6F001; }
-    .submit-btn-active { background:#E6F001; color:#002D59; border:none; border-radius:8px; padding:14px 28px; font-size:14px; font-weight:800; cursor:pointer; white-space:nowrap; flex-shrink:0; letter-spacing:.01em; }
-    .submit-btn-dis { background:#4D6680; color:rgba(255,255,255,.4); border:none; border-radius:8px; padding:14px 28px; font-size:14px; font-weight:700; cursor:not-allowed; white-space:nowrap; flex-shrink:0; }
-    .bmcd-footer { text-align:center; padding:16px 0 24px; font-size:10px; color:#94A3B8; letter-spacing:.07em; }
+    /* Result banners */
+    .approved-banner { padding:14px 22px; background:#F0FDF4; border-top:3px solid #1A9B5A; display:flex; align-items:center; gap:12px; }
+    .denied-banner   { padding:14px 22px; background:#FEF2F2; border-top:3px solid #DC2626; display:flex; align-items:center; gap:12px; }
+    .banner-icon { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .banner-title { font-size:12px; font-weight:700; }
+    .banner-title.g { color:#166534; }
+    .banner-title.r { color:#991B1B; }
+    .banner-sub { font-size:11px; color:#64748B; margin-top:2px; }
+    .banner-warn { font-size:11px; color:#D97706; margin-top:4px; }
 
     /* Error box */
-    .err-box { background:#FEF2F2; border:1px solid #FECACA; color:#DC2626; border-radius:8px; padding:10px 14px; font-size:13px; margin-bottom:12px; }
+    .err-box { background:#FEF2F2; border:1px solid #FECACA; color:#DC2626; border-radius:8px; padding:10px 14px; font-size:12px; margin-bottom:10px; }
 
-    /* Setup & Success screens */
+    /* Sync message */
+    .sync-msg { border-radius:8px; padding:10px 16px; margin-bottom:14px; font-size:12px; font-weight:600; }
+    .sync-msg.ok   { background:#F0FDF4; border:1px solid #86EFAC; color:#166534; }
+    .sync-msg.fail { background:#FEF2F2; border:1px solid #FECACA; color:#DC2626; }
+
+    /* History cards */
+    .hist-card { background:#fff; border-radius:10px; border:1px solid #D4DCE6; padding:13px 18px; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between; opacity:.88; }
+    .hist-opp  { font-size:13px; font-weight:700; color:#002D59; }
+    .hist-meta { font-size:11px; color:#94A3B8; margin-top:2px; }
+
+    /* Setup */
     .setup-wrap { min-height:100vh; background:#E2E8F0; display:flex; align-items:center; justify-content:center; padding:24px; }
     .setup-box { background:#fff; border-radius:14px; box-shadow:0 4px 28px rgba(0,45,89,.12); padding:40px; max-width:470px; width:100%; }
     .setup-logo-row { display:flex; align-items:center; gap:13px; margin-bottom:6px; }
     .setup-divider { height:1px; background:#E8EDF4; margin:18px 0 22px; }
-    .setup-inp { width:100%; padding:10px 13px; border:1.5px solid #D4DCE6; border-radius:7px; font-size:14px; color:#002D59; outline:none; background:#F8FAFB; }
+    .setup-inp { width:100%; padding:10px 13px; border:1.5px solid #D4DCE6; border-radius:7px; font-size:14px; color:#002D59; outline:none; background:#F8FAFB; margin-bottom:0; }
     .setup-inp:focus { border-color:#0049CD; background:#fff; box-shadow:0 0 0 3px rgba(0,73,205,.1); }
-    .setup-hint { font-size:11px; color:#94A3B8; margin-top:4px; margin-bottom:18px; }
-    .setup-btn { background:#0049CD; color:#fff; border:none; border-radius:8px; padding:13px 24px; font-size:14px; font-weight:700; cursor:pointer; width:100%; margin-top:6px; }
+    .setup-hint { font-size:11px; color:#94A3B8; margin:4px 0 18px; }
+    .setup-btn { background:#0049CD; color:#fff; border:none; border-radius:8px; padding:13px 24px; font-size:14px; font-weight:700; cursor:pointer; width:100%; }
     .setup-btn:disabled { opacity:.6; cursor:wait; }
+    .bmcd-lbl { display:block; font-size:10px; font-weight:700; color:#4D6680; letter-spacing:.07em; text-transform:uppercase; margin-bottom:5px; }
 
-    /* Main layout */
-    .bmcd-main { padding:24px 36px; max-width:880px; margin:0 auto; }
-    .g2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:14px; }
-    .g3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:14px; }
-    .g1 { display:grid; grid-template-columns:1fr; gap:16px; margin-bottom:0; }
-    .std-inp { width:100%; padding:9px 12px; border:1.5px solid #D4DCE6; border-radius:7px; font-size:13px; color:#1e293b; outline:none; background:#F8FAFB; }
-    .std-inp:focus { border-color:#0049CD; background:#fff; box-shadow:0 0 0 3px rgba(0,73,205,.1); }
+    /* Deny modal */
+    .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center; padding:24px; z-index:1000; }
+    .modal-box { background:#fff; border-radius:14px; padding:32px; max-width:440px; width:100%; box-shadow:0 20px 60px rgba(0,0,0,.2); }
+    .modal-title { font-size:17px; font-weight:800; color:#002D59; margin-bottom:6px; }
+    .modal-body { font-size:13px; color:#4D6680; margin-bottom:20px; line-height:1.5; }
+    .modal-textarea { width:100%; padding:10px 13px; border:1.5px solid #D4DCE6; border-radius:7px; font-size:13px; color:#002D59; outline:none; background:#F8FAFB; resize:vertical; margin-bottom:20px; }
+    .modal-textarea:focus { border-color:#DC2626; background:#fff; }
+    .modal-actions { display:flex; gap:10px; }
+    .modal-confirm { background:#DC2626; color:#fff; border:none; border-radius:7px; padding:11px 22px; font-size:13px; font-weight:700; cursor:pointer; flex:1; }
+    .modal-cancel { background:#F0F4F8; color:#334155; border:1.5px solid #D4DCE6; border-radius:7px; padding:11px 22px; font-size:13px; font-weight:600; cursor:pointer; flex:1; }
+
+    /* Footer */
+    .bmcd-footer { text-align:center; padding:16px 0 28px; font-size:10px; color:#94A3B8; letter-spacing:.07em; }
+
+    /* Loading */
+    .loading-state { text-align:center; padding:48px 0; color:#94A3B8; font-size:13px; }
+    .empty-state { text-align:center; padding:32px 0; color:#94A3B8; font-size:13px; }
   </style>
 </head>
 <body>
   <div id="root"></div>
   <script type="text/babel">
-    const { useState, useEffect } = React;
+    const { useState, useEffect, useCallback } = React;
 
     const MONDAY_API        = "https://api.monday.com/v2";
-    const SLOT_BOARD_ID     = 18422871700;
     const REQUESTS_BOARD_ID = 18422875681;
     const SUBITEMS_BOARD_ID = 18426331487;
-
-    const P = {
-      voltage:"dropdown_mm5ese7e", manufacturer:"dropdown_mm5ef8kt",
-      deliveryDate:"date4", poLineNum:"numeric_mm5sv1e1", status:"status",
+    const SLOT_BOARD_ID     = 18422871700;
+    const SUMMARY_BOARD_ID  = 18426507360;
+    const SUMMARY_ITEM = {
+      "145": { available: 12799154965, reserved: 12799161604 },
+      "245": { available: 12799175418, reserved: 12799161594 },
+      "362": { available: 12799148221, reserved: 12799138949 },
     };
-    const S = {
-      status:"status", voltage:"dropdown_mm65b542",
-      manufacturer:"dropdown_mm65c7mt", deliveryDate:"date_mm65h7tw",
-    };
+    const SUMMARY_COL = { count: "numeric_mm662sje" };
 
     async function gql(apiKey, query, variables = {}) {
       const res = await fetch(MONDAY_API, {
-        method:"POST",
-        headers:{"Content-Type":"application/json", Authorization:apiKey},
-        body:JSON.stringify({query, variables}),
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: apiKey },
+        body: JSON.stringify({ query, variables }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
@@ -156,491 +166,461 @@
       return json.data;
     }
 
-    function colMap(cvs) { const m={}; cvs.forEach(c=>{m[c.id]=c.text;}); return m; }
+    function colVal(cvs, id) { return cvs?.find(c=>c.id===id)?.text || ""; }
+    function colRaw(cvs, id) { const r=cvs?.find(c=>c.id===id)?.value; try{return r?JSON.parse(r):null;}catch{return null;} }
 
-    /* BMcD logo mark SVG */
-    const LogoMark = () => (
-      <svg width="34" height="34" viewBox="0 0 34 34" fill="none">
-        <path d="M7 27 L17 5" stroke="white" strokeWidth="5.5" strokeLinecap="round"/>
-        <path d="M15 27 L25 5" stroke="white" strokeWidth="5.5" strokeLinecap="round"/>
-        <path d="M3 17 L31 17" stroke="#E6F001" strokeWidth="3.5" strokeLinecap="round" opacity="0.9"/>
+    /* BMcD logo mark */
+    const LogoMark = ({ size=28 }) => (
+      <svg width={size} height={size} viewBox="0 0 28 28" fill="none">
+        <path d="M5 22 L13 4" stroke="white" strokeWidth="4.5" strokeLinecap="round"/>
+        <path d="M12 22 L20 4" stroke="white" strokeWidth="4.5" strokeLinecap="round"/>
+        <path d="M2 13 L26 13" stroke="#E6F001" strokeWidth="3" strokeLinecap="round" opacity="0.9"/>
       </svg>
     );
 
     function App() {
-      const [apiKey,    setApiKey]    = useState("");
-      const [setupLoad, setSetupLoad] = useState(false);
-      const [setupErr,  setSetupErr]  = useState("");
-      const [screen,    setScreen]    = useState("setup");
-
-      const [poLines, setPoLines] = useState([]);
-      const [users,   setUsers]   = useState([]);
-
-      const [selectedPoLineId, setSelectedPoLineId] = useState("");
-      const [subitems,         setSubitems]          = useState([]);
-      const [subLoad,          setSubLoad]           = useState(false);
-      const [selectedIds,      setSelectedIds]       = useState([]);
-
-      const [form, setForm] = useState({
-        projectName:"", clientName:"", requesterId:"",
-        opportunityNumber:"", estimatedValue:"", breakersEnable:"", dropDeadDate:"",
-      });
-      const [submitting,  setSubmitting]  = useState(false);
-      const [submitErr,   setSubmitErr]   = useState("");
-      const [createdItem, setCreatedItem] = useState(null);
+      const [apiKey,      setApiKey]      = useState("");
+      const [setupLoad,   setSetupLoad]   = useState(false);
+      const [setupErr,    setSetupErr]    = useState("");
+      const [screen,      setScreen]      = useState("setup");
+      const [requests,    setRequests]    = useState({ pending:[], history:[] });
+      const [loading,     setLoading]     = useState(false);
+      const [loadErr,     setLoadErr]     = useState("");
+      const [actionState, setActionState] = useState({});
+      const [denyTarget,  setDenyTarget]  = useState(null);
+      const [denyReason,  setDenyReason]  = useState("");
+      const [syncing,     setSyncing]     = useState(false);
+      const [syncMsg,     setSyncMsg]     = useState("");
 
       /* ── Connect ── */
       const handleSetup = async () => {
         if (!apiKey.trim()) { setSetupErr("API key is required."); return; }
         setSetupErr(""); setSetupLoad(true);
         try {
-          const [bd, ud] = await Promise.all([
-            gql(apiKey, `{ boards(ids:[${SLOT_BOARD_ID}]) { items_page(limit:50) { items { id name group{title} column_values(ids:["${P.voltage}","${P.manufacturer}","${P.deliveryDate}","${P.poLineNum}","${P.status}","numeric_mm5e51z3","numeric_mm5sw1t1"]) { id text } } } } }`),
-            gql(apiKey, `{ users(kind:all, limit:500) { id name email } }`),
-          ]);
-          const lines = bd.boards[0].items_page.items.map(item => {
-            const cols    = colMap(item.column_values);
-            const total   = parseFloat(cols["numeric_mm5e51z3"]||"0")||0;
-            const reserved= parseFloat(cols["numeric_mm5sw1t1"] ||"0")||0;
-            const avail   = Math.max(0, total - reserved);
-            return {
-              id:item.id, name:item.name,
-              voltage:cols[P.voltage]||"", manufacturer:cols[P.manufacturer]||"",
-              deliveryDate:cols[P.deliveryDate]||"", availableQty:avail,
-              poLineNum:parseFloat(cols[P.poLineNum]||"0"),
-            };
-          });
-          lines.sort((a,b)=>a.poLineNum-b.poLineNum);
-          setPoLines(lines); setUsers(ud.users||[]); setScreen("form");
+          await gql(apiKey, `{ me { id } }`);
+          setScreen("dashboard");
+          loadRequests(apiKey);
         } catch(e) { setSetupErr("Connection failed: "+e.message); }
         finally { setSetupLoad(false); }
       };
 
-      /* ── Load subitems ── */
-      useEffect(() => {
-        if (!selectedPoLineId||!apiKey) { setSubitems([]); setSelectedIds([]); return; }
-        setSubLoad(true); setSubitems([]); setSelectedIds([]);
-        gql(apiKey, `{ items(ids:[${selectedPoLineId}]) { subitems { id name column_values(ids:["${S.status}","${S.voltage}","${S.manufacturer}","${S.deliveryDate}"]) { id text } } } }`)
-          .then(d => {
-            const raw = d.items?.[0]?.subitems||[];
-            setSubitems(raw.map(si => {
-              const cols = colMap(si.column_values);
-              return { id:si.id, name:si.name, status:cols[S.status]||"", voltage:cols[S.voltage]||"", manufacturer:cols[S.manufacturer]||"", deliveryDate:cols[S.deliveryDate]||"" };
-            }));
-          })
-          .catch(e=>console.error(e))
-          .finally(()=>setSubLoad(false));
-      }, [selectedPoLineId]);
-
-      const available   = subitems.filter(s=>s.status==="Available");
-      const unavailable = subitems.filter(s=>s.status!=="Available");
-      const selectedLine = poLines.find(l=>l.id===selectedPoLineId);
-      const selectedUser = users.find(u=>u.id===form.requesterId);
-      const toggle = id => setSelectedIds(p=>p.includes(id)?p.filter(x=>x!==id):[...p,id]);
-
-      const isValid = form.projectName.trim()&&form.clientName.trim()&&form.requesterId&&
-        form.opportunityNumber.trim()&&form.estimatedValue&&form.breakersEnable&&
-        form.dropDeadDate&&selectedPoLineId&&selectedIds.length>0;
-
-      /* ── Submit ── */
-      const handleSubmit = async () => {
-        if (!isValid) { setSubmitErr("Please complete all required fields and select at least one breaker unit."); return; }
-        setSubmitErr(""); setSubmitting(true);
+      /* ── Load requests ── */
+      const loadRequests = useCallback(async (key = apiKey) => {
+        setLoading(true); setLoadErr("");
         try {
-          const cv = {
-            "text_mm5es7sz":        form.projectName,
-            "short_texthrb2ladn":   form.clientName,
-            "short_textfukcenx9":   form.opportunityNumber,
-            "number8jhwmqe9":       parseFloat(form.estimatedValue)||0,
-            "numeric_mm5es9c9":     selectedIds.length,
-            "text_mm66tjan":        selectedIds.join("|"),
-            "peopleda149l5r":       { personsAndTeams:[{ id:parseInt(form.requesterId), kind:"person" }] },
-            "single_selectjej2zay": { label:form.breakersEnable },
-            "date3z59ugdu":         { date:form.dropDeadDate },
-            "status":               { label:"Working on it" },
-            "board_relation_mm5e11py": { item_ids:[parseInt(selectedPoLineId)] },
-            "board_relation_mm65ppt4": { item_ids:selectedIds.map(Number) },
+          const boardData = await gql(key, `{
+            boards(ids:[${REQUESTS_BOARD_ID}]) {
+              items_page(limit:100) {
+                items {
+                  id name
+                  column_values(ids:[
+                    "text_mm5es7sz","short_texthrb2ladn","peopleda149l5r",
+                    "short_textfukcenx9","numeric_mm5es9c9","status",
+                    "number8jhwmqe9","single_selectjej2zay","date3z59ugdu",
+                    "text_mm66tjan","board_relation_mm5e11py","formula_mm5s2fxb"
+                  ]) { id text value }
+                }
+              }
+            }
+          }`);
+
+          const allItems = boardData.boards[0].items_page.items;
+          const pending  = allItems.filter(i=>colVal(i.column_values,"status")==="Working on it");
+          const history  = allItems.filter(i=>["Done","Stuck"].includes(colVal(i.column_values,"status")));
+
+          const allIds = [];
+          pending.forEach(item => {
+            colVal(item.column_values,"text_mm66tjan").split("|").filter(Boolean).forEach(id=>allIds.push(id));
+          });
+          const uniqueIds = [...new Set(allIds)].map(Number).filter(Boolean);
+
+          let subMap = {};
+          if (uniqueIds.length > 0) {
+            const subData = await gql(key, `{ items(ids:[${uniqueIds.join(",")}]) { id name column_values(ids:["status","dropdown_mm65b542","dropdown_mm65c7mt","date_mm65h7tw"]) { id text } parent_item { id name } } }`);
+            subData.items.forEach(si => {
+              const cols = {};
+              si.column_values.forEach(c=>{cols[c.id]=c.text;});
+              subMap[si.id] = { id:si.id, name:si.name, status:cols["status"]||"", voltage:cols["dropdown_mm65b542"]||"", manufacturer:cols["dropdown_mm65c7mt"]||"", deliveryDate:cols["date_mm65h7tw"]||"", parentId:si.parent_item?.id };
+            });
+          }
+
+          const enrich = item => {
+            const cv = item.column_values;
+            const ids = colVal(cv,"text_mm66tjan").split("|").filter(Boolean);
+            const slotRaw    = colRaw(cv,"board_relation_mm5e11py");
+            const slotId     = slotRaw?.linkedPulseIds?.[0]?.linkedPulseId || null;
+            const reqRaw     = colRaw(cv,"peopleda149l5r");
+            const requesterId= reqRaw?.personsAndTeams?.[0]?.id || null;
+            return {
+              id:item.id, name:item.name,
+              projectName:   colVal(cv,"text_mm5es7sz"),
+              clientName:    colVal(cv,"short_texthrb2ladn"),
+              requesterName: colVal(cv,"peopleda149l5r"),
+              requesterId,
+              opportunityNum:colVal(cv,"short_textfukcenx9"),
+              quantityNeeded:parseInt(colVal(cv,"numeric_mm5es9c9")||"0"),
+              status:        colVal(cv,"status"),
+              estimatedValue:colVal(cv,"number8jhwmqe9"),
+              breakersEnable:colVal(cv,"single_selectjej2zay"),
+              dropDeadDate:  colVal(cv,"date3z59ugdu"),
+              capacityCheck: colVal(cv,"formula_mm5s2fxb"),
+              breakerIds: ids,
+              breakers: ids.map(id=>subMap[id]||{ id, name:`Unit ${id}`, status:"Unknown" }),
+              slotId,
+            };
           };
-          const result = await gql(apiKey,
-            `mutation CreateRequest($boardId:ID!,$name:String!,$cv:JSON!,$groupId:String!) { create_item(board_id:$boardId,item_name:$name,column_values:$cv,group_id:$groupId) { id url } }`,
-            { boardId:String(REQUESTS_BOARD_ID), name:form.opportunityNumber, cv:JSON.stringify(cv), groupId:"topics" }
-          );
-          setCreatedItem(result.create_item);
-          setScreen("success");
-        } catch(e) { setSubmitErr("Submission failed: "+e.message); }
-        finally { setSubmitting(false); }
+
+          setRequests({ pending:pending.map(enrich), history:history.slice(0,8).map(enrich) });
+        } catch(e) { setLoadErr("Failed to load requests: "+e.message); }
+        finally { setLoading(false); }
+      }, [apiKey]);
+
+      /* ── Sync counts ── */
+      const syncAllCounts = async () => {
+        setSyncing(true); setSyncMsg("");
+        try {
+          const data = await gql(apiKey, `{ boards(ids:[${SLOT_BOARD_ID}]) { items_page(limit:50) { items { id name subitems { id column_values(ids:["status"]) { id text } } } } } }`);
+          const items = data.boards[0].items_page.items;
+          let updated = 0;
+          for (const item of items) {
+            const reservedCount = (item.subitems||[]).filter(si=>si.column_values?.find(c=>c.id==="status")?.text==="Reserved").length;
+            await gql(apiKey, `mutation($itemId:ID!,$boardId:ID!,$cv:JSON!){ change_multiple_column_values(item_id:$itemId,board_id:$boardId,column_values:$cv){ id } }`,
+              { itemId:String(item.id), boardId:String(SLOT_BOARD_ID), cv:JSON.stringify({ numeric_mm5sw1t1:reservedCount }) });
+            updated++;
+          }
+          const allSubData = await gql(apiKey, `{ boards(ids:[${SUBITEMS_BOARD_ID}]) { items_page(limit:200) { items { column_values(ids:["status","dropdown_mm65b542"]) { id text } } } } }`);
+          const allSubItems = allSubData.boards[0].items_page.items;
+          for (const v of ["145","245","362"]) {
+            const forV  = allSubItems.filter(si=>si.column_values.find(c=>c.id==="dropdown_mm65b542")?.text===v);
+            const avail2= forV.filter(si=>si.column_values.find(c=>c.id==="status")?.text==="Available").length;
+            const resv2 = forV.filter(si=>si.column_values.find(c=>c.id==="status")?.text==="Reserved").length;
+            const sids  = SUMMARY_ITEM[v];
+            if (sids) {
+              await gql(apiKey, `mutation($itemId:ID!,$boardId:ID!,$cv:JSON!){ change_multiple_column_values(item_id:$itemId,board_id:$boardId,column_values:$cv){ id } }`,
+                { itemId:String(sids.available), boardId:String(SUMMARY_BOARD_ID), cv:JSON.stringify({ [SUMMARY_COL.count]:avail2 }) });
+              await gql(apiKey, `mutation($itemId:ID!,$boardId:ID!,$cv:JSON!){ change_multiple_column_values(item_id:$itemId,board_id:$boardId,column_values:$cv){ id } }`,
+                { itemId:String(sids.reserved), boardId:String(SUMMARY_BOARD_ID), cv:JSON.stringify({ [SUMMARY_COL.count]:resv2 }) });
+            }
+          }
+          setSyncMsg(`Synced ${updated} PO lines and capacity summary.`);
+          setTimeout(()=>setSyncMsg(""), 6000);
+        } catch(e) { setSyncMsg("Sync failed: "+e.message); }
+        finally { setSyncing(false); }
       };
 
-      const reset = () => {
-        setForm({ projectName:"", clientName:"", requesterId:"", opportunityNumber:"", estimatedValue:"", breakersEnable:"", dropDeadDate:"" });
-        setSelectedPoLineId(""); setSelectedIds([]); setSubitems([]); setSubmitErr(""); setCreatedItem(null);
+      /* ── Approve ── */
+      const handleApprove = async req => {
+        setActionState(p=>({...p,[req.id]:{working:true,error:null,done:false}}));
+        const errs = [];
+        try {
+          for (const breakerId of req.breakerIds) {
+            const bid = parseInt(breakerId);
+            if (!bid) continue;
+            try {
+              const cv = { status:{ label:"Reserved" }, text_mm65z5wm:req.opportunityNum };
+              if (req.requesterId) cv.person = { personsAndTeams:[{ id:parseInt(req.requesterId), kind:"person" }] };
+              await gql(apiKey, `mutation($itemId:ID!,$boardId:ID!,$cv:JSON!){ change_multiple_column_values(item_id:$itemId,board_id:$boardId,column_values:$cv){ id } }`,
+                { itemId:String(bid), boardId:String(SUBITEMS_BOARD_ID), cv:JSON.stringify(cv) });
+            } catch(e) { errs.push(`Unit ${breakerId}: ${e.message}`); }
+          }
+          if (req.slotId) {
+            try {
+              const siData = await gql(apiKey, `{ items(ids:[${req.slotId}]) { subitems { id column_values(ids:["status"]) { id text } } } }`);
+              const allSubs = siData.items?.[0]?.subitems||[];
+              const reservedCount = allSubs.filter(si=>si.column_values?.find(c=>c.id==="status")?.text==="Reserved").length;
+              await gql(apiKey, `mutation($itemId:ID!,$boardId:ID!,$cv:JSON!){ change_multiple_column_values(item_id:$itemId,board_id:$boardId,column_values:$cv){ id } }`,
+                { itemId:String(req.slotId), boardId:String(SLOT_BOARD_ID), cv:JSON.stringify({ numeric_mm5sw1t1:reservedCount }) });
+            } catch(e) { errs.push("Reserved Qty sync: "+e.message); }
+          }
+          try {
+            for (const v of ["145","245","362"]) {
+              const vRowIds = SUMMARY_ITEM[v];
+              if (!vRowIds) continue;
+              const vData = await gql(apiKey, `{ boards(ids:[${SUBITEMS_BOARD_ID}]) { items_page(limit:200) { items { column_values(ids:["status","dropdown_mm65b542"]) { id text } } } } }`);
+              const vItems = vData.boards[0].items_page.items;
+              const forV   = vItems.filter(si=>si.column_values.find(c=>c.id==="dropdown_mm65b542")?.text===v);
+              const avail  = forV.filter(si=>si.column_values.find(c=>c.id==="status")?.text==="Available").length;
+              const resv   = forV.filter(si=>si.column_values.find(c=>c.id==="status")?.text==="Reserved").length;
+              await gql(apiKey, `mutation($itemId:ID!,$boardId:ID!,$cv:JSON!){ change_multiple_column_values(item_id:$itemId,board_id:$boardId,column_values:$cv){ id } }`,
+                { itemId:String(vRowIds.available), boardId:String(SUMMARY_BOARD_ID), cv:JSON.stringify({ [SUMMARY_COL.count]:avail }) });
+              await gql(apiKey, `mutation($itemId:ID!,$boardId:ID!,$cv:JSON!){ change_multiple_column_values(item_id:$itemId,board_id:$boardId,column_values:$cv){ id } }`,
+                { itemId:String(vRowIds.reserved), boardId:String(SUMMARY_BOARD_ID), cv:JSON.stringify({ [SUMMARY_COL.count]:resv }) });
+            }
+          } catch(e) { errs.push("Summary sync: "+e.message); }
+          await gql(apiKey, `mutation($itemId:ID!,$boardId:ID!,$cv:JSON!){ change_multiple_column_values(item_id:$itemId,board_id:$boardId,column_values:$cv){ id } }`,
+            { itemId:String(req.id), boardId:String(REQUESTS_BOARD_ID), cv:JSON.stringify({ status:{ label:"Done" } }) });
+          setActionState(p=>({...p,[req.id]:{ working:false, error:errs.length?errs.join("; "):null, done:true, outcome:"approved" }}));
+          setTimeout(()=>loadRequests(), 1800);
+        } catch(e) {
+          setActionState(p=>({...p,[req.id]:{ working:false, error:"Approval failed: "+e.message, done:false }}));
+        }
       };
 
-      const voltBadgeClass = v => v==="145"?"vbadge v145":v==="245"?"vbadge v245":"vbadge v362";
+      /* ── Deny ── */
+      const handleDeny = async (req, reason) => {
+        setDenyTarget(null); setDenyReason("");
+        setActionState(p=>({...p,[req.id]:{working:true,error:null,done:false}}));
+        try {
+          await gql(apiKey, `mutation($itemId:ID!,$boardId:ID!,$cv:JSON!){ change_multiple_column_values(item_id:$itemId,board_id:$boardId,column_values:$cv){ id } }`,
+            { itemId:String(req.id), boardId:String(REQUESTS_BOARD_ID), cv:JSON.stringify({ status:{ label:"Stuck" } }) });
+          if (reason.trim()) {
+            await gql(apiKey, `mutation($itemId:ID!,$body:String!){ create_update(item_id:$itemId,body:$body){ id } }`,
+              { itemId:parseInt(req.id), body:"Request denied.\n\nReason: "+reason });
+          }
+          setActionState(p=>({...p,[req.id]:{ working:false, error:null, done:true, outcome:"denied" }}));
+          setTimeout(()=>loadRequests(), 1800);
+        } catch(e) {
+          setActionState(p=>({...p,[req.id]:{ working:false, error:"Denial failed: "+e.message, done:false }}));
+        }
+      };
 
-      /* ── SETUP ── */
+      /* ── SETUP SCREEN ── */
       if (screen==="setup") return (
         <div className="setup-wrap">
           <div className="setup-box">
             <div className="setup-logo-row">
-              <div style={{ background:"#002D59", borderRadius:10, width:40, height:40, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+              <div style={{ background:"#002D59", borderRadius:10, width:42, height:42, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
                 <LogoMark/>
               </div>
               <div>
-                <div style={{ fontSize:16, fontWeight:800, color:"#002D59", letterSpacing:".04em" }}>BURNS &amp; McDONNELL</div>
-                <div style={{ fontSize:11, color:"#94A3B8", marginTop:2 }}>HV Circuit Breaker Slot Program</div>
+                <div style={{ fontSize:16, fontWeight:800, color:"#002D59", letterSpacing:".03em" }}>BURNS &amp; McDONNELL</div>
+                <div style={{ fontSize:11, color:"#94A3B8", marginTop:2 }}>BSF Review Dashboard</div>
               </div>
             </div>
             <div className="setup-divider"/>
             <p style={{ color:"#4D6680", fontSize:13, marginBottom:22, lineHeight:1.6 }}>
-              Enter your Monday.com API key to connect. Your key is held only in memory for this session and is never stored.
+              Reviewer-only tool. Approving a request automatically marks all selected breaker units as Reserved in Monday.com, updates the slot Reserved Qty, and writes the opportunity number to each unit.
             </p>
-            <label className="bmcd-lbl">Monday.com API Key <span className="bmcd-req">*</span></label>
+            <label className="bmcd-lbl">Monday.com API Key <span style={{ color:"#DC2626" }}>*</span></label>
             <input type="password" value={apiKey} onChange={e=>setApiKey(e.target.value)}
               onKeyDown={e=>e.key==="Enter"&&handleSetup()}
-              placeholder="eyJhbGciOiJIUzI1Ni..." className="setup-inp" style={{ marginBottom:0 }}/>
+              placeholder="eyJhbGciOiJIUzI1Ni..." className="setup-inp"/>
             <div className="setup-hint">Profile → Developers → My Access Tokens</div>
             {setupErr && <div className="err-box">{setupErr}</div>}
             <button onClick={handleSetup} disabled={setupLoad} className="setup-btn">
-              {setupLoad ? "Connecting…" : "Connect & Open Form →"}
+              {setupLoad ? "Connecting…" : "Open Review Dashboard →"}
             </button>
           </div>
         </div>
       );
 
-      /* ── SUCCESS ── */
-      if (screen==="success") return (
-        <div className="setup-wrap">
-          <div className="setup-box" style={{ maxWidth:520, textAlign:"center" }}>
-            <div style={{ width:60, height:60, background:"#E6F001", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 18px" }}>
-              <svg width="28" height="28" fill="none" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" stroke="#002D59" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            </div>
-            <div style={{ fontSize:22, fontWeight:800, color:"#002D59", marginBottom:8 }}>Request Submitted!</div>
-            <div style={{ color:"#4D6680", fontSize:13, lineHeight:1.6, marginBottom:22 }}>
-              Your request for <strong style={{ color:"#002D59" }}>{form.opportunityNumber}</strong> has been created in Monday.com and sent to the BSF Review Committee. Please check your email for submission details and next steps.
-            </div>
-            <div style={{ background:"#EEF3FC", borderRadius:10, padding:16, marginBottom:22, textAlign:"left" }}>
-              <div style={{ fontSize:9, fontWeight:700, color:"#0049CD", marginBottom:10, letterSpacing:".1em" }}>SUBMISSION SUMMARY</div>
-              {[
-                ["Project",          form.projectName],
-                ["Client",           form.clientName],
-                ["Opportunity #",    form.opportunityNumber],
-                ["PO Line",          selectedLine?.name||"—"],
-                ["Breakers Selected",`${selectedIds.length} unit${selectedIds.length!==1?"s":""}`],
-                ["Requester",        selectedUser?.name||"—"],
-              ].map(([k,v])=>(
-                <div key={k} style={{ display:"flex", justifyContent:"space-between", fontSize:12, color:"#334155", marginBottom:5, gap:12 }}>
-                  <span style={{ color:"#94A3B8" }}>{k}</span>
-                  <span style={{ fontWeight:600 }}>{v}</span>
-                </div>
-              ))}
-              {createdItem?.url && (
-                <a href={createdItem.url} target="_blank" rel="noreferrer"
-                  style={{ display:"block", marginTop:12, fontSize:11, color:"#0049CD", textDecoration:"underline" }}>
-                  View in Monday.com →
-                </a>
-              )}
-            </div>
-            <button onClick={()=>{reset();setScreen("form");}}
-              style={{ background:"#F0F4F8", color:"#334155", border:"1.5px solid #D4DCE6", borderRadius:8, padding:"11px 24px", fontSize:13, fontWeight:600, cursor:"pointer", width:"100%" }}>
-              Submit Another Request
-            </button>
-          </div>
-        </div>
-      );
-
-      /* ── MAIN FORM ── */
-      const VOLT_GROUPS = [
-        { label:"145 kV — GE", key:"145" },
-        { label:"245 kV — GE / Hitachi", key:"245" },
-        { label:"362 kV — Hitachi", key:"362" },
-      ];
-
-      const reservedPct = selectedLine
-        ? Math.round(((selectedLine.availableQty > 0 ? 0 : 1)) * 100)
-        : 0;
+      /* ── DASHBOARD ── */
+      const { pending=[], history=[] } = requests;
+      const totalReserved = history.filter(r=>r.status==="Done").length;
 
       return (
-        <div>
-          {/* ── HEADER ── */}
+        <div style={{ minHeight:"100vh", background:"#E2E8F0", paddingBottom:40 }}>
+
+          {/* Header */}
           <div className="bmcd-header">
-            <div className="bmcd-header-inner">
-              <div className="bmcd-logo-row">
-                <LogoMark/>
-                <div className="bmcd-logo-wordmark">
-                  <span className="brand">BURNS &amp; McDONNELL</span>
-                  <span className="est">ESTABLISHED 1898</span>
-                </div>
+            <div className="bmcd-header-left">
+              <div className="bmcd-logo-wrap"><LogoMark/></div>
+              <div>
+                <div className="bmcd-title">BSF Review Dashboard</div>
+                <div className="bmcd-title-sub">BURNS &amp; McDONNELL &nbsp;·&nbsp; HV CIRCUIT BREAKER SLOT PROGRAM</div>
               </div>
-              <div className="bmcd-eyebrow">HV Circuit Breaker Slot Program</div>
-              <div className="bmcd-hero-title">Reserve Your <span>Breaker Slots.</span><br/>Power Your Projects.</div>
-              <div className="bmcd-neon-bar"/>
-              <div className="bmcd-hero-sub">Submit a reservation request for high-voltage circuit breakers from the Burns &amp; McDonnell slot inventory. Wesco · GE · Hitachi — 145kV, 245kV, 362kV</div>
+            </div>
+            <div className="bmcd-header-right">
+              <button onClick={syncAllCounts} disabled={syncing||loading} className="btn-header-outline">
+                {syncing ? "Syncing…" : "Sync Counts"}
+              </button>
+              <button onClick={()=>loadRequests()} disabled={loading} className="btn-header-neon">
+                {loading ? "Loading…" : "Refresh"}
+              </button>
             </div>
           </div>
 
-          {/* ── STEP INDICATOR ── */}
-          <div className="bmcd-steps">
-            <div className={`bmcd-step ${!selectedPoLineId ? "active" : "inactive"}`}>
-              <div className="bmcd-step-num">1</div>
-              <div className="bmcd-step-lbl">Project Details</div>
+          {/* Stats bar */}
+          <div className="stats-bar">
+            <div className="stat-item">
+              <div className="stat-num">{loading?"…":pending.length}</div>
+              <div className="stat-lbl">Pending Review</div>
             </div>
-            <div className="bmcd-step-div"/>
-            <div className={`bmcd-step ${selectedPoLineId ? "active" : "inactive"}`}>
-              <div className="bmcd-step-num">2</div>
-              <div className="bmcd-step-lbl">Breaker Selection</div>
+            <div className="stat-item">
+              <div className="stat-num">{loading?"…":history.length}</div>
+              <div className="stat-lbl">Total Decisions</div>
+            </div>
+            <div className="stat-item">
+              <div className="stat-num">120</div>
+              <div className="stat-lbl">Total Program Units</div>
             </div>
           </div>
 
-          {/* ── FORM BODY ── */}
+          {/* Main content */}
           <div className="bmcd-main">
 
-            {/* Section A — Project Details */}
-            <div className="bmcd-card">
-              <div className="bmcd-card-hdr">
-                <div className="bmcd-card-icon">
-                  <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke="#0049CD" strokeWidth="1.8" strokeLinecap="round"/></svg>
-                </div>
-                <div>
-                  <div className="bmcd-card-title">Project Details</div>
-                  <div className="bmcd-card-sub">Tell us about your project and opportunity</div>
-                </div>
-                <span className="bmcd-step-tag">STEP 01</span>
-              </div>
+            {syncMsg && (
+              <div className={`sync-msg ${syncMsg.startsWith("Synced")?"ok":"fail"}`}>{syncMsg}</div>
+            )}
+            {loadErr && <div className="err-box">{loadErr}</div>}
 
-              <div className="g2">
-                <div>
-                  <label className="bmcd-lbl">Project Name<span className="bmcd-req">*</span></label>
-                  <input value={form.projectName} onChange={e=>setForm(f=>({...f,projectName:e.target.value}))}
-                    className="std-inp" placeholder="e.g. Riverside Substation Expansion"/>
-                </div>
-                <div>
-                  <label className="bmcd-lbl">Client Name<span className="bmcd-req">*</span></label>
-                  <input value={form.clientName} onChange={e=>setForm(f=>({...f,clientName:e.target.value}))}
-                    className="std-inp" placeholder="e.g. American Electric Power"/>
-                </div>
-              </div>
-
-              <div className="g2">
-                <div>
-                  <label className="bmcd-lbl">Requester<span className="bmcd-req">*</span></label>
-                  <select value={form.requesterId} onChange={e=>setForm(f=>({...f,requesterId:e.target.value}))} className="std-inp">
-                    <option value="">Select your name…</option>
-                    {users.map(u=><option key={u.id} value={u.id}>{u.name}{u.email?` (${u.email})`:""}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="bmcd-lbl">Opportunity Number<span className="bmcd-req">*</span></label>
-                  <input value={form.opportunityNumber} onChange={e=>setForm(f=>({...f,opportunityNumber:e.target.value}))}
-                    className="std-inp" placeholder="e.g. OPP073319"/>
-                </div>
-              </div>
-
-              <div className="g2" style={{ marginBottom:14 }}>
-                <div>
-                  <label className="bmcd-lbl">BMcD Estimated Project Value (USD)<span className="bmcd-req">*</span></label>
-                  <input type="number" min="0" value={form.estimatedValue}
-                    onChange={e=>setForm(f=>({...f,estimatedValue:e.target.value}))}
-                    className="std-inp" placeholder="e.g. 5000000"/>
-                </div>
-                <div>
-                  <label className="bmcd-lbl">Drop-Dead Customer PO Release Date<span className="bmcd-req">*</span></label>
-                  <input type="date" value={form.dropDeadDate}
-                    onChange={e=>setForm(f=>({...f,dropDeadDate:e.target.value}))} className="std-inp"/>
-                </div>
-              </div>
-
-              <div className="g1">
-                <div>
-                  <label className="bmcd-lbl">Do the Breakers Enable the Project?<span className="bmcd-req">*</span></label>
-                  <select value={form.breakersEnable} onChange={e=>setForm(f=>({...f,breakersEnable:e.target.value}))} className="std-inp">
-                    <option value="">Select…</option>
-                    <option value="Yes">Yes — project cannot proceed without these breakers</option>
-                    <option value="No">No — net new purchases could support the schedule</option>
-                  </select>
-                </div>
-              </div>
+            {/* Pending section */}
+            <div className="section-row">
+              <div className="section-title">Pending Review</div>
+              <span className="count-pill amber">{loading?"…":pending.length} request{pending.length!==1?"s":""}</span>
+              {!loading && pending.length===0 && <span style={{ fontSize:12, color:"#94A3B8" }}>— All caught up</span>}
             </div>
 
-            {/* Section B — Breaker Selection */}
-            <div className="bmcd-card">
-              <div className="bmcd-card-hdr">
-                <div className="bmcd-card-icon">
-                  <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" stroke="#0049CD" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                </div>
-                <div>
-                  <div className="bmcd-card-title">Breaker Selection</div>
-                  <div className="bmcd-card-sub">Choose your delivery slot, then select specific units</div>
-                </div>
-                <span className="bmcd-step-tag">STEP 02</span>
-              </div>
+            {loading && <div className="loading-state">Loading requests from Monday.com…</div>}
 
-              <p style={{ color:"#4D6680", fontSize:12, lineHeight:1.6, marginBottom:14 }}>
-                Select a delivery slot, then hand-pick the exact breaker units you need.
-                Only <strong>Available</strong> units can be selected.
-              </p>
+            {!loading && pending.length===0 && (
+              <div className="empty-state">No pending requests at this time.</div>
+            )}
 
-              {/* PO Line dropdown */}
-              <label className="bmcd-lbl" style={{ marginBottom:6 }}>Delivery Slot / PO Line<span className="bmcd-req">*</span></label>
-              <select
-                value={selectedPoLineId}
-                onChange={e=>setSelectedPoLineId(e.target.value)}
-                className="std-inp"
-                style={{ fontFamily:"monospace", fontSize:12, marginBottom:4 }}>
-                <option value="">Choose a delivery slot…</option>
-                {VOLT_GROUPS.map(({label, key})=>{
-                  const lines = poLines.filter(l=>String(l.voltage).trim()===key);
-                  if (!lines.length) return null;
-                  return (
-                    <optgroup key={key} label={label}>
-                      {lines.map(l=>(
-                        <option key={l.id} value={l.id}>
-                          {`Line ${String(l.poLineNum).padStart(2,"0")} — ${l.voltage}kV ${l.manufacturer} — Delivery ${l.deliveryDate} — ${l.availableQty} avail${l.availableQty<=0?" (FULL)":""}`}
-                        </option>
-                      ))}
-                    </optgroup>
-                  );
-                })}
-                {poLines.filter(l=>!["145","245","362"].includes(String(l.voltage).trim())).map(l=>(
-                  <option key={l.id} value={l.id}>
-                    {`Line ${String(l.poLineNum).padStart(2,"0")} — ${l.voltage}kV ${l.manufacturer} — Delivery ${l.deliveryDate} — ${l.availableQty} avail`}
-                  </option>
-                ))}
-              </select>
+            {pending.map(req => {
+              const as = actionState[req.id]||{};
+              const capOk = req.capacityCheck==="Sufficient";
+              return (
+                <div key={req.id} className="req-card"
+                  style={{ borderLeft:`4px solid ${as.done?(as.outcome==="approved"?"#1A9B5A":"#DC2626"):"#E6A000"}` }}>
 
-              {/* Breaker picker */}
-              {selectedPoLineId && (
-                <div style={{ marginTop:18 }}>
-                  {subLoad ? (
-                    <div style={{ textAlign:"center", padding:24, color:"#94A3B8", fontSize:13 }}>Loading breaker units…</div>
-                  ) : (
-                    <>
-                      {/* Capacity bar */}
-                      {selectedLine && (
-                        <div className="cap-wrap">
-                          <div className="cap-row">
-                            <span>{selectedLine.name}</span>
-                            <span className="cap-green">{selectedLine.availableQty} of {selectedLine.availableQty + (subitems.length - available.length)} units available</span>
+                  {/* Card top */}
+                  <div className="req-card-top">
+                    <div>
+                      <div className="req-opp">{req.opportunityNum||req.name}</div>
+                      <div className="req-proj">{req.projectName} &mdash; <span className="req-client">{req.clientName}</span></div>
+                    </div>
+                    <div style={{ display:"flex", gap:8, flexShrink:0, flexWrap:"wrap", justifyContent:"flex-end" }}>
+                      <span className="pill pill-pending">Pending Review</span>
+                      {req.capacityCheck && (
+                        <span className={`pill ${capOk?"pill-cap-ok":"pill-cap-warn"}`}>{req.capacityCheck}</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Meta grid */}
+                  <div className="meta-grid">
+                    {[
+                      ["Requester",        req.requesterName||"—"],
+                      ["Est. Project Value",req.estimatedValue?`$${Number(req.estimatedValue).toLocaleString()}`:"—"],
+                      ["Breakers Enable",   req.breakersEnable||"—"],
+                      ["Drop-Dead Date",    req.dropDeadDate||"—"],
+                      ["Qty Requested",     `${req.quantityNeeded} unit${req.quantityNeeded!==1?"s":""}`],
+                      ["Units Selected",    `${req.breakerIds.length} unit${req.breakerIds.length!==1?"s":""}`],
+                    ].map(([k,v])=>(
+                      <div key={k}>
+                        <div className="meta-lbl">{k}</div>
+                        <div className="meta-val">{v}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Breaker units */}
+                  <div className="breaker-section">
+                    <div className="breaker-lbl">Requested Breaker Units</div>
+                    {req.breakers.length===0 ? (
+                      <div style={{ fontSize:12, color:"#94A3B8" }}>No breaker details available</div>
+                    ) : req.breakers.map(b => {
+                      const isAvail = b.status==="Available";
+                      const isResv  = b.status==="Reserved";
+                      return (
+                        <div key={b.id} className={`breaker-row ${isAvail?"avail":isResv?"reserved-state":"unknown"}`}>
+                          <div style={{ flex:1 }}>
+                            <div className="breaker-name">{b.name}</div>
+                            <div className="breaker-meta-text">
+                              {[b.voltage&&`${b.voltage}kV`, b.manufacturer, b.deliveryDate&&`Delivery: ${b.deliveryDate}`].filter(Boolean).join(" · ")}
+                            </div>
                           </div>
-                          <div className="cap-track">
-                            <div className="cap-fill" style={{ width:`${available.length>0?Math.round((available.length/(available.length+unavailable.length||1))*100):0}%` }}/>
-                          </div>
+                          <span className={`b-pill ${isAvail?"g":isResv?"r":"u"}`}>{b.status||"Unknown"}</span>
                         </div>
-                      )}
+                      );
+                    })}
+                  </div>
 
-                      {/* Status banner */}
-                      {(()=>{
-                        let bg,bc,color,msg;
-                        if (available.length===0){bg="#FEF2F2";bc="#FECACA";color="#DC2626";msg="No available breakers on this line — choose a different slot or contact procurement.";}
-                        else if (selectedIds.length===0){bg="#FFFBEB";bc="#FDE68A";color="#D97706";msg=`${available.length} breaker${available.length!==1?"s":""} available — select the units you need below.`;}
-                        else{bg="#E6F9EE";bc="#6DD19A";color="#1A9B5A";msg=`${selectedIds.length} of ${available.length} available breaker${available.length!==1?"s":""} selected.`;}
-                        return <div style={{ background:bg, border:`1px solid ${bc}`, borderRadius:8, padding:"9px 14px", marginBottom:12, fontSize:12, color, fontWeight:500 }}>{msg}</div>;
-                      })()}
-
-                      {available.length > 0 && (
-                        <>
-                          {/* Counter */}
-                          <div className="counter">
-                            <div>
-                              <div className="c-lbl">Units Selected</div>
-                              <div className="c-num">{selectedIds.length}<span className="c-of">of {available.length}</span></div>
-                            </div>
-                            <div>
-                              {available.length > 1 && (
-                                <div style={{ display:"flex", gap:12, justifyContent:"flex-end", marginBottom:4 }}>
-                                  <button onClick={()=>setSelectedIds(available.map(s=>s.id))}
-                                    style={{ fontSize:11, color:"#E6F001", background:"none", border:"none", cursor:"pointer", padding:0, fontWeight:600 }}>
-                                    Select all {available.length}
-                                  </button>
-                                  <span style={{ color:"rgba(255,255,255,.3)" }}>|</span>
-                                  <button onClick={()=>setSelectedIds([])}
-                                    style={{ fontSize:11, color:"rgba(255,255,255,.55)", background:"none", border:"none", cursor:"pointer", padding:0 }}>
-                                    Clear
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Breaker checkboxes */}
-                          <div style={{ marginBottom:6 }}>
-                            <div style={{ background:"#F0F4F8", padding:"7px 14px", fontSize:9, fontWeight:700, color:"#4D6680", letterSpacing:".1em", borderRadius:"7px 7px 0 0", borderBottom:"1px solid #D4DCE6" }}>
-                              AVAILABLE UNITS — SELECT ALL YOU NEED
-                            </div>
-                            {available.map((b,i)=>{
-                              const chk = selectedIds.includes(b.id);
-                              return (
-                                <label key={b.id} className={`bi ${chk?"chk":"unchk"}`}
-                                  style={{ borderRadius:i===available.length-1?"0 0 7px 7px":"0", borderTop:i===0?"none":"1px solid #E8EDF4" }}>
-                                  <div className={`cbox ${chk?"on":"off"}`}>
-                                    {chk && <span style={{ color:"#fff", fontSize:11, fontWeight:700 }}>✓</span>}
-                                  </div>
-                                  <input type="checkbox" checked={chk} onChange={()=>toggle(b.id)} style={{ display:"none" }}/>
-                                  <div style={{ flex:1 }}>
-                                    <div style={{ fontWeight:600, color:"#002D59", fontSize:13 }}>{b.name}</div>
-                                    <div style={{ fontSize:11, color:"#94A3B8", marginTop:1 }}>
-                                      {[b.voltage&&`${b.voltage}kV`, b.manufacturer, b.deliveryDate&&`Delivery: ${b.deliveryDate}`].filter(Boolean).join(" · ")}
-                                    </div>
-                                  </div>
-                                  <span style={{ fontSize:10, fontWeight:700, color:"#1A9B5A", background:"#E6F9EE", padding:"2px 8px", borderRadius:20, flexShrink:0 }}>Available</span>
-                                </label>
-                              );
-                            })}
-                          </div>
-                        </>
-                      )}
-
-                      {/* Unavailable (collapsible) */}
-                      {unavailable.length > 0 && (
-                        <details style={{ marginTop:8 }}>
-                          <summary style={{ fontSize:11, color:"#94A3B8", cursor:"pointer", padding:"3px 0" }}>
-                            {unavailable.length} unavailable unit{unavailable.length!==1?"s":""} on this line (shown for transparency)
-                          </summary>
-                          <div style={{ border:"1px solid #D4DCE6", borderRadius:8, marginTop:6, overflow:"hidden", opacity:.5 }}>
-                            {unavailable.map((b,i)=>(
-                              <div key={b.id} style={{ display:"flex", alignItems:"center", gap:11, padding:"10px 14px", borderBottom:i<unavailable.length-1?"1px solid #E8EDF4":"none" }}>
-                                <div style={{ width:18, flexShrink:0 }}/>
-                                <div style={{ flex:1 }}>
-                                  <div style={{ fontWeight:500, color:"#94A3B8", fontSize:12 }}>{b.name}</div>
-                                  <div style={{ fontSize:11, color:"#B4C4D4" }}>{[b.voltage&&`${b.voltage}kV`,b.manufacturer].filter(Boolean).join(" · ")}</div>
-                                </div>
-                                <span style={{ fontSize:10, fontWeight:700, color:"#94A3B8", background:"#F1F5F9", padding:"2px 8px", borderRadius:20 }}>{b.status||"Unavailable"}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </details>
-                      )}
-                    </>
+                  {/* Actions / result */}
+                  {as.done ? (
+                    as.outcome==="approved" ? (
+                      <div className="approved-banner">
+                        <div className="banner-icon" style={{ background:"#DCFCE7" }}>
+                          <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" stroke="#166534" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        </div>
+                        <div>
+                          <div className="banner-title g">Approved — breakers marked Reserved, slot qty updated, opportunity number written to each unit</div>
+                          {as.error && <div className="banner-warn">Completed with warnings: {as.error}</div>}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="denied-banner">
+                        <div className="banner-icon" style={{ background:"#FEE2E2" }}>
+                          <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" stroke="#991B1B" strokeWidth="2.5" strokeLinecap="round"/></svg>
+                        </div>
+                        <div>
+                          <div className="banner-title r">Denied — request closed</div>
+                          <div className="banner-sub">A comment has been posted on the Monday.com item if a reason was provided.</div>
+                        </div>
+                      </div>
+                    )
+                  ) : (
+                    <div className="action-bar">
+                      {as.error && <div className="err-box" style={{ width:"100%", marginBottom:0 }}>{as.error}</div>}
+                      <button onClick={()=>handleApprove(req)} disabled={!!as.working} className="btn-approve">
+                        {as.working ? "Processing…" : "Approve"}
+                      </button>
+                      <button onClick={()=>{setDenyTarget(req);setDenyReason("");}} disabled={!!as.working} className="btn-deny">
+                        Deny
+                      </button>
+                      <a href={`https://burnsmcd-inc.monday.com/boards/${REQUESTS_BOARD_ID}`}
+                        target="_blank" rel="noreferrer" className="btn-view-link">
+                        View in Monday.com →
+                      </a>
+                    </div>
                   )}
                 </div>
-              )}
-            </div>
+              );
+            })}
 
-            {/* Submit zone */}
-            <div className="submit-zone">
-              {submitErr && <div className="err-box" style={{ marginBottom:14 }}>{submitErr}</div>}
-              <div className="submit-inner">
-                <div className="submit-text">
-                  <strong>Ready to submit.</strong> Your request for {selectedIds.length || "your"} breaker unit{selectedIds.length!==1?"s":""}{selectedLine?` on ${selectedLine.name}`:""} will be routed to the BSF Review Committee for review. Please check your email for submission details and next steps.
+            {/* History */}
+            {history.length > 0 && (
+              <div style={{ marginTop:32 }}>
+                <div className="section-row">
+                  <div className="section-title">Recent Decisions</div>
+                  <span className="count-pill gray">{history.length} record{history.length!==1?"s":""}</span>
                 </div>
-                <button
-                  onClick={handleSubmit}
-                  disabled={!isValid||submitting}
-                  className={isValid&&!submitting?"submit-btn-active":"submit-btn-dis"}>
-                  {submitting ? "Submitting…" : isValid ? `Submit Request — ${selectedIds.length} Unit${selectedIds.length!==1?"s":""}` : "Submit Request"}
-                </button>
+                {history.map(req=>(
+                  <div key={req.id} className="hist-card"
+                    style={{ borderLeft:`4px solid ${req.status==="Done"?"#1A9B5A":"#DC2626"}` }}>
+                    <div>
+                      <div className="hist-opp">{req.opportunityNum||req.name}</div>
+                      <div className="hist-meta">{req.projectName} &mdash; {req.clientName} &mdash; {req.breakerIds.length} unit{req.breakerIds.length!==1?"s":""}</div>
+                    </div>
+                    <span className={`pill ${req.status==="Done"?"pill-approved":"pill-denied"}`}>
+                      {req.status==="Done" ? "Approved" : "Denied"}
+                    </span>
+                  </div>
+                ))}
               </div>
-              {!isValid && (
-                <div style={{ textAlign:"center", fontSize:11, color:"rgba(255,255,255,.4)", marginTop:12 }}>
-                  Complete all required fields and select at least one breaker unit to enable submission.
-                </div>
-              )}
-            </div>
+            )}
 
-            <div className="bmcd-footer">
+            <div className="bmcd-footer" style={{ marginTop:32 }}>
               BURNS &amp; McDONNELL &nbsp;·&nbsp; BREAKER SLOT PROGRAM &nbsp;·&nbsp; CONFIDENTIAL — INTERNAL USE ONLY
             </div>
           </div>
+
+          {/* Deny modal */}
+          {denyTarget && (
+            <div className="modal-overlay">
+              <div className="modal-box">
+                <div style={{ width:36, height:36, background:"#FEE2E2", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", marginBottom:14 }}>
+                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" stroke="#DC2626" strokeWidth="2.5" strokeLinecap="round"/></svg>
+                </div>
+                <div className="modal-title">Deny Request</div>
+                <div className="modal-body">
+                  Denying <strong>{denyTarget.opportunityNum||denyTarget.name}</strong>. Add an optional reason — it will be posted as a comment on the Monday.com item so the requester can see it.
+                </div>
+                <label className="bmcd-lbl">Reason (optional)</label>
+                <textarea
+                  value={denyReason}
+                  onChange={e=>setDenyReason(e.target.value)}
+                  placeholder="e.g. Insufficient project value to justify slot reservation at this stage."
+                  rows={3}
+                  className="modal-textarea"/>
+                <div className="modal-actions">
+                  <button onClick={()=>handleDeny(denyTarget,denyReason)} className="modal-confirm">Confirm Denial</button>
+                  <button onClick={()=>{setDenyTarget(null);setDenyReason("");}} className="modal-cancel">Cancel</button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       );
     }
