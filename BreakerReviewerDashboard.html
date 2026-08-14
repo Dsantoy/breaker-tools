@@ -229,7 +229,7 @@
           const history  = allItems.filter(i=>["Done","Stuck"].includes(colVal(i.column_values,"status")));
 
           const allIds = [];
-          pending.forEach(item => {
+          [...pending, ...history].forEach(item => {
             colVal(item.column_values,"text_mm66tjan").split("|").filter(Boolean).forEach(id=>allIds.push(id));
           });
           const uniqueIds = [...new Set(allIds)].map(Number).filter(Boolean);
