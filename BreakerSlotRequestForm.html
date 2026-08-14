@@ -255,7 +255,7 @@
             "peopleda149l5r":       { personsAndTeams:[{ id:parseInt(form.requesterId), kind:"person" }] },
             "single_selectjej2zay": { label:form.breakersEnable },
             "date3z59ugdu":         { date:form.dropDeadDate },
-            "status":               { label:"Working on it" },
+            "status":               { label: hasQueueItems ? "In Queue" : "Working on it" },
             "board_relation_mm5e11py": { item_ids:[parseInt(selectedPoLineId)] },
             "board_relation_mm65ppt4": { item_ids:selectedIds.map(Number) },
           };
@@ -331,9 +331,15 @@
             <div style={{ width:60, height:60, background:"#E6F001", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 18px" }}>
               <svg width="28" height="28" fill="none" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" stroke="#002D59" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
             </div>
-            <div style={{ fontSize:22, fontWeight:800, color:"#002D59", marginBottom:8 }}>Request Submitted!</div>
+            <div style={{ fontSize:22, fontWeight:800, color:"#002D59", marginBottom:8 }}>
+              {hasQueueItems ? "Added to Queue!" : "Request Submitted!"}
+            </div>
             <div style={{ color:"#4D6680", fontSize:13, lineHeight:1.6, marginBottom:22 }}>
-              Your slot reservation request for <strong style={{ color:"#002D59" }}>{form.opportunityNumber}</strong> has been submitted. Your selected breakers are now marked <strong style={{ color:"#92400E" }}>Pending Review</strong>. Please check your email for submission details and next steps.
+              {hasQueueItems ? (
+                <>Your request for <strong style={{ color:"#002D59" }}>{form.opportunityNumber}</strong> has been placed <strong style={{ color:"#1D4ED8" }}>in the queue</strong>. The selected breakers already have a pending reservation. You will be notified by the BSF Review Committee if the original request falls through and your reservation becomes available.</>
+              ) : (
+                <>Your slot reservation request for <strong style={{ color:"#002D59" }}>{form.opportunityNumber}</strong> has been submitted. Your selected breakers are now marked <strong style={{ color:"#92400E" }}>Pending Review</strong>. Please check your email for submission details and next steps.</>
+              )}
             </div>
             <div style={{ background:"#EEF3FC", borderRadius:10, padding:16, marginBottom:22, textAlign:"left" }}>
               <div style={{ fontSize:9, fontWeight:700, color:"#0049CD", marginBottom:10, letterSpacing:".1em" }}>SUBMISSION SUMMARY</div>
