@@ -157,7 +157,7 @@
     async function gql(apiKey, query, variables = {}) {
       const res = await fetch(MONDAY_API, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: apiKey },
+        headers: { "Content-Type": "application/json", Authorization: apiKey.replace(/[^\x20-\xFF]/g, "").trim() },
         body: JSON.stringify({ query, variables }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
