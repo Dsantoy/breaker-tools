@@ -169,6 +169,7 @@
       const [submitting,  setSubmitting]  = useState(false);
       const [submitErr,   setSubmitErr]   = useState("");
       const [createdItem, setCreatedItem] = useState(null);
+      const [wasQueued,   setWasQueued]   = useState(false);
 
       /* ── Connect + load all data ── */
       const handleSetup = async () => {
@@ -244,7 +245,14 @@
         if (!isValid) { setSubmitErr("Please complete all required fields and select at least one breaker unit."); return; }
         setSubmitErr(""); setSubmitting(true);
         try {
-          // 1. Create Project Request item
+          // 1. Live-check current breaker statuses right now (not from cached local state)
+          //    This catches cases where another user submitted first since this form loaded
+          const liveData = await gql(apiKey, `{ items(ids:[${selectedIds.join(",")}]) { id column_values(ids:["status"]) { id text } } }`);
+          const liveStatuses = {};
+          liveData.items.forEach(item => {
+            liveStatuses[item.id] = item.column_values.find(c=>c.id==="status")?.text || "";
+          });
+          const actualHasQueueItems = selectedIds.some(id => QUEUE_STATUSES.includes(liveStatuses[id] || ""));
           const cv = {
             "text_mm5es7sz":        form.projectName,
             "short_texthrb2ladn":   form.clientName,
@@ -255,7 +263,7 @@
             "peopleda149l5r":       { personsAndTeams:[{ id:parseInt(form.requesterId), kind:"person" }] },
             "single_selectjej2zay": { label:form.breakersEnable },
             "date3z59ugdu":         { date:form.dropDeadDate },
-            "status":               { label: hasQueueItems ? "In Queue" : "Working on it" },
+            "status":               { label: actualHasQueueItems ? "In Queue" : "Working on it" },
             "board_relation_mm5e11py": { item_ids:[parseInt(selectedPoLineId)] },
             "board_relation_mm65ppt4": { item_ids:selectedIds.map(Number) },
           };
@@ -264,11 +272,10 @@
             { boardId:String(REQUESTS_BOARD_ID), name:form.opportunityNumber, cv:JSON.stringify(cv), groupId:"topics" }
           );
 
-          // 2. Update each AVAILABLE breaker to "Pending Review"
-          //    Pending Review / Pending Reservation stay unchanged (already queued)
+          // 2. Update each AVAILABLE breaker to "Pending Review" using live status
+          //    Queue-status breakers stay unchanged
           for (const breakerId of selectedIds) {
-            const breaker = selectable.find(s=>s.id===breakerId);
-            if (breaker && breaker.status==="Available") {
+            if ((liveStatuses[breakerId] || "") === "Available") {
               try {
                 await gql(apiKey,
                   `mutation($itemId:ID!,$boardId:ID!,$cv:JSON!){ change_multiple_column_values(item_id:$itemId,board_id:$boardId,column_values:$cv,create_labels_if_missing:true){ id } }`,
@@ -278,6 +285,20 @@
             }
           }
 
+          // 3. Update local subitem cache so same-session re-submissions are correct
+          setSubitemsByLine(prev => {
+            const updated = { ...prev };
+            if (updated[selectedPoLineId]) {
+              updated[selectedPoLineId] = updated[selectedPoLineId].map(s =>
+                (selectedIds.includes(s.id) && (liveStatuses[s.id]||"")==="Available")
+                  ? { ...s, status:"Pending Review" }
+                  : s
+              );
+            }
+            return updated;
+          });
+
+          setWasQueued(actualHasQueueItems);
           setCreatedItem(result.create_item);
           setScreen("success");
         } catch(e) { setSubmitErr("Submission failed: "+e.message); }
@@ -286,7 +307,7 @@
 
       const reset = () => {
         setForm({ projectName:"", clientName:"", requesterId:"", opportunityNumber:"", estimatedValue:"", breakersEnable:"", dropDeadDate:"" });
-        setSelectedPoLineId(""); setSelectedIds([]); setSubmitErr(""); setCreatedItem(null);
+        setSelectedPoLineId(""); setSelectedIds([]); setSubmitErr(""); setCreatedItem(null); setWasQueued(false);
       };
 
       const VOLT_GROUPS = [
@@ -332,10 +353,10 @@
               <svg width="28" height="28" fill="none" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" stroke="#002D59" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
             </div>
             <div style={{ fontSize:22, fontWeight:800, color:"#002D59", marginBottom:8 }}>
-              {hasQueueItems ? "Added to Queue!" : "Request Submitted!"}
+              {wasQueued ? "Added to Queue!" : "Request Submitted!"}
             </div>
             <div style={{ color:"#4D6680", fontSize:13, lineHeight:1.6, marginBottom:22 }}>
-              {hasQueueItems ? (
+              {wasQueued ? (
                 <>Your request for <strong style={{ color:"#002D59" }}>{form.opportunityNumber}</strong> has been placed <strong style={{ color:"#1D4ED8" }}>in the queue</strong>. The selected breakers already have a pending reservation. You will be notified by the BSF Review Committee if the original request falls through and your reservation becomes available.</>
               ) : (
                 <>Your slot reservation request for <strong style={{ color:"#002D59" }}>{form.opportunityNumber}</strong> has been submitted. Your selected breakers are now marked <strong style={{ color:"#92400E" }}>Pending Review</strong>. Please check your email for submission details and next steps.</>
