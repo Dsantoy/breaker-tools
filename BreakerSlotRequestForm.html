@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Breaker Slot Request — Burns &amp; McDonnell</title>
+  <title>Slot Reservation Request Form — Burns &amp; McDonnell</title>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -11,24 +11,18 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { background: #E2E8F0; font-family: system-ui, -apple-system, sans-serif; }
     select, input, textarea, button { font-family: inherit; }
-
-    /* Header */
     .bmcd-header { background: #002D59; position: relative; overflow: hidden; padding: 28px 36px 40px; }
-    .bmcd-header::before { content:''; position:absolute; top:0; left:0; right:0; bottom:0;
-      background-image: repeating-linear-gradient(-55deg,transparent,transparent 18px,rgba(0,73,205,0.35) 18px,rgba(0,73,205,0.35) 22px);
-      pointer-events:none; }
+    .bmcd-header::before { content:''; position:absolute; top:0;left:0;right:0;bottom:0;
+      background-image: repeating-linear-gradient(-55deg,transparent,transparent 18px,rgba(0,73,205,0.35) 18px,rgba(0,73,205,0.35) 22px); pointer-events:none; }
     .bmcd-header-inner { position:relative; z-index:1; }
     .bmcd-logo-row { display:flex; align-items:center; gap:14px; margin-bottom:26px; }
-    .bmcd-logo-wordmark { color:#fff; }
-    .bmcd-logo-wordmark .brand { font-size:16px; font-weight:800; letter-spacing:.05em; display:block; line-height:1.1; }
+    .bmcd-logo-wordmark .brand { font-size:16px; font-weight:800; letter-spacing:.05em; color:#fff; display:block; line-height:1.1; }
     .bmcd-logo-wordmark .est { font-size:9px; letter-spacing:.18em; color:rgba(255,255,255,.55); font-weight:400; margin-top:3px; display:block; }
     .bmcd-eyebrow { font-size:10px; font-weight:700; letter-spacing:.14em; color:#E6F001; text-transform:uppercase; margin-bottom:10px; }
     .bmcd-hero-title { font-size:28px; font-weight:800; color:#fff; line-height:1.18; margin-bottom:4px; }
     .bmcd-hero-title span { color:#E6F001; }
     .bmcd-neon-bar { width:44px; height:4px; background:#E6F001; margin:12px 0 10px; border-radius:2px; }
     .bmcd-hero-sub { font-size:12px; color:rgba(255,255,255,.62); max-width:520px; line-height:1.55; }
-
-    /* Step indicator */
     .bmcd-steps { background:#0049CD; padding:0 36px; display:flex; align-items:center; }
     .bmcd-step { display:flex; align-items:center; gap:9px; padding:13px 0; padding-right:28px; position:relative; }
     .bmcd-step.active::after { content:''; position:absolute; bottom:0; left:0; right:0; height:3px; background:#E6F001; border-radius:2px 2px 0 0; }
@@ -39,90 +33,60 @@
     .bmcd-step.active .bmcd-step-lbl { color:#fff; }
     .bmcd-step.inactive .bmcd-step-lbl { color:rgba(255,255,255,.45); }
     .bmcd-step-div { width:20px; height:1px; background:rgba(255,255,255,.25); margin-right:14px; }
-
-    /* Cards */
     .bmcd-card { background:#fff; border-radius:12px; padding:22px 26px; border:1px solid #D4DCE6; box-shadow:0 2px 14px rgba(0,45,89,.07); margin-bottom:18px; }
     .bmcd-card-hdr { display:flex; align-items:center; gap:12px; margin-bottom:20px; padding-bottom:14px; border-bottom:1px solid #E8EDF4; }
     .bmcd-card-icon { width:36px; height:36px; border-radius:8px; background:#EEF3FC; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
     .bmcd-card-title { font-size:14px; font-weight:700; color:#002D59; }
     .bmcd-card-sub { font-size:11px; color:#A1AFB3; margin-top:1px; }
     .bmcd-step-tag { font-size:9px; font-weight:700; letter-spacing:.1em; color:#0049CD; background:#EEF3FC; padding:2px 8px; border-radius:4px; margin-left:auto; }
-
-    /* Field labels */
     .bmcd-lbl { display:block; font-size:10px; font-weight:700; color:#4D6680; letter-spacing:.07em; text-transform:uppercase; margin-bottom:5px; }
     .bmcd-req { color:#DC2626; margin-left:2px; }
-
-    /* PO Line slot cards */
-    .slot-card { display:flex; align-items:center; gap:10px; padding:11px 14px; border-radius:8px; margin-bottom:5px; cursor:pointer; border:1.5px solid transparent; transition:all .15s; }
-    .slot-card.sel { background:#EEF3FC; border-color:#0049CD; }
-    .slot-card.unsel { background:#F6F8FA; border-color:#D4DCE6; }
-    .slot-card.unsel:hover { background:#EEF3FC; border-color:#B0C4E8; }
-    .vbadge { font-size:9px; font-weight:800; padding:3px 8px; border-radius:5px; flex-shrink:0; letter-spacing:.05em; }
-    .v145 { background:#E6F0FF; color:#0049CD; }
-    .v245 { background:#E0F5FF; color:#006699; }
-    .v362 { background:#FFF8E6; color:#A06B00; }
-    .slot-name { font-size:12px; font-weight:600; color:#002D59; }
-    .slot-meta { font-size:11px; color:#A1AFB3; margin-top:1px; }
-    .slot-avail { margin-left:auto; font-size:10px; font-weight:700; color:#1A9B5A; background:#E6F9EE; padding:2px 9px; border-radius:20px; flex-shrink:0; white-space:nowrap; }
-    .slot-avail.zero { color:#64748b; background:#F1F5F9; }
-
-    /* Voltage group header */
-    .vgrp-hdr { font-size:9px; font-weight:700; letter-spacing:.12em; color:#94A3B8; text-transform:uppercase; padding:6px 0 3px; margin-top:6px; }
-
-    /* Capacity bar */
     .cap-wrap { background:#F0F4F8; border-radius:8px; padding:12px 14px; margin:10px 0 16px; }
     .cap-row { display:flex; justify-content:space-between; font-size:10px; font-weight:600; color:#4D6680; margin-bottom:7px; }
-    .cap-green { color:#1A9B5A; }
     .cap-track { height:7px; background:#D4DCE6; border-radius:99px; overflow:hidden; }
-    .cap-fill { height:100%; background:linear-gradient(90deg,#0049CD,#0066FF); border-radius:99px; }
-
-    /* Counter banner */
+    .cap-fill { height:100%; border-radius:99px; }
     .counter { background:linear-gradient(90deg,#0049CD,#0066FF); border-radius:8px; padding:12px 16px; display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
     .c-lbl { font-size:11px; color:rgba(255,255,255,.75); margin-bottom:1px; }
     .c-num { font-size:21px; font-weight:800; color:#E6F001; line-height:1; }
     .c-of { font-size:12px; font-weight:400; color:rgba(255,255,255,.5); margin-left:4px; }
-    .c-price-lbl { font-size:10px; color:rgba(255,255,255,.6); text-align:right; }
-    .c-price { font-size:15px; font-weight:700; color:#fff; text-align:right; }
-
-    /* Breaker items */
-    .bi { display:flex; align-items:center; gap:11px; padding:11px 14px; border-radius:8px; margin-bottom:4px; border:1.5px solid transparent; cursor:pointer; transition:background .1s; }
-    .bi.chk { background:#E6F9EE; border-color:#6DD19A; }
-    .bi.unchk { background:#F6F8FA; border-color:#D4DCE6; }
-    .bi.unchk:hover { background:#F0F4F8; }
+    .bi { display:flex; align-items:center; gap:11px; padding:11px 14px; border-radius:0; margin-bottom:0; border-top:1px solid #E8EDF4; cursor:pointer; transition:background .1s; }
+    .bi:first-child { border-top:none; }
+    .bi.chk { background:#E6F9EE; }
+    .bi.unchk { background:#fff; }
+    .bi.unchk:hover { background:#F8FAFB; }
+    .bi.chk-pending { background:#FFFBEB; }
+    .bi.chk-reservation { background:#EFF6FF; }
     .cbox { width:18px; height:18px; border-radius:5px; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
     .cbox.on { background:#1A9B5A; }
+    .cbox.on-pending { background:#D97706; }
+    .cbox.on-reservation { background:#1D4ED8; }
     .cbox.off { background:#fff; border:2px solid #B4C4D4; }
-
-    /* Submit area */
     .submit-zone { background:#002D59; border-radius:12px; padding:22px 26px; margin-bottom:16px; }
     .submit-inner { display:flex; align-items:center; justify-content:space-between; gap:20px; }
     .submit-text { color:rgba(255,255,255,.7); font-size:12px; line-height:1.6; max-width:420px; }
     .submit-text strong { color:#E6F001; }
-    .submit-btn-active { background:#E6F001; color:#002D59; border:none; border-radius:8px; padding:14px 28px; font-size:14px; font-weight:800; cursor:pointer; white-space:nowrap; flex-shrink:0; letter-spacing:.01em; }
+    .submit-btn-active { background:#E6F001; color:#002D59; border:none; border-radius:8px; padding:14px 28px; font-size:14px; font-weight:800; cursor:pointer; white-space:nowrap; flex-shrink:0; }
     .submit-btn-dis { background:#4D6680; color:rgba(255,255,255,.4); border:none; border-radius:8px; padding:14px 28px; font-size:14px; font-weight:700; cursor:not-allowed; white-space:nowrap; flex-shrink:0; }
     .bmcd-footer { text-align:center; padding:16px 0 24px; font-size:10px; color:#94A3B8; letter-spacing:.07em; }
-
-    /* Error box */
     .err-box { background:#FEF2F2; border:1px solid #FECACA; color:#DC2626; border-radius:8px; padding:10px 14px; font-size:13px; margin-bottom:12px; }
-
-    /* Setup & Success screens */
+    .queue-notice { background:#FEF3C7; border:1px solid #FDE68A; color:#92400E; border-radius:8px; padding:10px 14px; font-size:12px; margin-bottom:10px; line-height:1.5; }
     .setup-wrap { min-height:100vh; background:#E2E8F0; display:flex; align-items:center; justify-content:center; padding:24px; }
     .setup-box { background:#fff; border-radius:14px; box-shadow:0 4px 28px rgba(0,45,89,.12); padding:40px; max-width:470px; width:100%; }
     .setup-logo-row { display:flex; align-items:center; gap:13px; margin-bottom:6px; }
     .setup-divider { height:1px; background:#E8EDF4; margin:18px 0 22px; }
     .setup-inp { width:100%; padding:10px 13px; border:1.5px solid #D4DCE6; border-radius:7px; font-size:14px; color:#002D59; outline:none; background:#F8FAFB; }
     .setup-inp:focus { border-color:#0049CD; background:#fff; box-shadow:0 0 0 3px rgba(0,73,205,.1); }
-    .setup-hint { font-size:11px; color:#94A3B8; margin-top:4px; margin-bottom:18px; }
-    .setup-btn { background:#0049CD; color:#fff; border:none; border-radius:8px; padding:13px 24px; font-size:14px; font-weight:700; cursor:pointer; width:100%; margin-top:6px; }
+    .setup-hint { font-size:11px; color:#94A3B8; margin:4px 0 18px; }
+    .setup-btn { background:#0049CD; color:#fff; border:none; border-radius:8px; padding:13px 24px; font-size:14px; font-weight:700; cursor:pointer; width:100%; margin-top:4px; }
     .setup-btn:disabled { opacity:.6; cursor:wait; }
-
-    /* Main layout */
     .bmcd-main { padding:24px 36px; max-width:880px; margin:0 auto; }
     .g2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:14px; }
-    .g3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:14px; }
     .g1 { display:grid; grid-template-columns:1fr; gap:16px; margin-bottom:0; }
     .std-inp { width:100%; padding:9px 12px; border:1.5px solid #D4DCE6; border-radius:7px; font-size:13px; color:#1e293b; outline:none; background:#F8FAFB; }
     .std-inp:focus { border-color:#0049CD; background:#fff; box-shadow:0 0 0 3px rgba(0,73,205,.1); }
+    .legend { display:flex; gap:14px; flex-wrap:wrap; margin-bottom:12px; }
+    .legend-item { display:flex; align-items:center; gap:5px; font-size:10px; color:#4D6680; }
+    .legend-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
   </style>
 </head>
 <body>
@@ -135,14 +99,10 @@
     const REQUESTS_BOARD_ID = 18422875681;
     const SUBITEMS_BOARD_ID = 18426331487;
 
-    const P = {
-      voltage:"dropdown_mm5ese7e", manufacturer:"dropdown_mm5ef8kt",
-      deliveryDate:"date4", poLineNum:"numeric_mm5sv1e1", status:"status",
-    };
-    const S = {
-      status:"status", voltage:"dropdown_mm65b542",
-      manufacturer:"dropdown_mm65c7mt", deliveryDate:"date_mm65h7tw",
-    };
+    // Statuses that cannot be selected (fully locked)
+    const LOCKED_STATUSES = ["Reserved", "Delivered"];
+    // Statuses that are selectable but mean queue position
+    const QUEUE_STATUSES = ["Pending Review", "Pending Reservation"];
 
     async function gql(apiKey, query, variables = {}) {
       const res = await fetch(MONDAY_API, {
@@ -158,7 +118,29 @@
 
     function colMap(cvs) { const m={}; cvs.forEach(c=>{m[c.id]=c.text;}); return m; }
 
-    /* BMcD logo mark SVG */
+    const statusStyle = (status) => {
+      if (status==="Available")           return { color:"#1A9B5A", bg:"#DCFCE7", label:"Available" };
+      if (status==="Pending Review")      return { color:"#92400E", bg:"#FEF3C7", label:"Pending Review" };
+      if (status==="Pending Reservation") return { color:"#1D4ED8", bg:"#DBEAFE", label:"Pending Reservation" };
+      if (status==="Reserved")            return { color:"#991B1B", bg:"#FEE2E2", label:"Reserved" };
+      if (status==="Delivered")           return { color:"#374151", bg:"#F3F4F6", label:"Delivered" };
+      return { color:"#64748B", bg:"#F1F5F9", label:status||"Unknown" };
+    };
+
+    const cboxClass = (status, checked) => {
+      if (!checked) return "cbox off";
+      if (status==="Available") return "cbox on";
+      if (status==="Pending Review") return "cbox on-pending";
+      return "cbox on-reservation";
+    };
+
+    const biClass = (status, checked) => {
+      if (!checked) return "bi unchk";
+      if (status==="Available") return "bi chk";
+      if (status==="Pending Review") return "bi chk-pending";
+      return "bi chk-reservation";
+    };
+
     const LogoMark = () => (
       <svg width="34" height="34" viewBox="0 0 34 34" fill="none">
         <path d="M7 27 L17 5" stroke="white" strokeWidth="5.5" strokeLinecap="round"/>
@@ -173,12 +155,11 @@
       const [setupErr,  setSetupErr]  = useState("");
       const [screen,    setScreen]    = useState("setup");
 
-      const [poLines, setPoLines] = useState([]);
-      const [users,   setUsers]   = useState([]);
+      const [poLines,         setPoLines]         = useState([]);
+      const [subitemsByLine,  setSubitemsByLine]   = useState({});
+      const [users,           setUsers]            = useState([]);
 
       const [selectedPoLineId, setSelectedPoLineId] = useState("");
-      const [subitems,         setSubitems]          = useState([]);
-      const [subLoad,          setSubLoad]           = useState(false);
       const [selectedIds,      setSelectedIds]       = useState([]);
 
       const [form, setForm] = useState({
@@ -189,53 +170,69 @@
       const [submitErr,   setSubmitErr]   = useState("");
       const [createdItem, setCreatedItem] = useState(null);
 
-      /* ── Connect ── */
+      /* ── Connect + load all data ── */
       const handleSetup = async () => {
         if (!apiKey.trim()) { setSetupErr("API key is required."); return; }
         setSetupErr(""); setSetupLoad(true);
         try {
+          // Load PO lines WITH their subitems for accurate counts
           const [bd, ud] = await Promise.all([
-            gql(apiKey, `{ boards(ids:[${SLOT_BOARD_ID}]) { items_page(limit:50) { items { id name group{title} column_values(ids:["${P.voltage}","${P.manufacturer}","${P.deliveryDate}","${P.poLineNum}","${P.status}","numeric_mm5e51z3","numeric_mm5sw1t1"]) { id text } } } } }`),
+            gql(apiKey, `{
+              boards(ids:[${SLOT_BOARD_ID}]) {
+                items_page(limit:50) {
+                  items {
+                    id name
+                    group { title }
+                    column_values(ids:["dropdown_mm5ese7e","dropdown_mm5ef8kt","date4","numeric_mm5sv1e1"]) { id text }
+                    subitems {
+                      id name
+                      column_values(ids:["status","dropdown_mm65b542","dropdown_mm65c7mt","date_mm65h7tw"]) { id text }
+                    }
+                  }
+                }
+              }
+            }`),
             gql(apiKey, `{ users(kind:all, limit:500) { id name email } }`),
           ]);
+
+          const sbl = {};
           const lines = bd.boards[0].items_page.items.map(item => {
-            const cols    = colMap(item.column_values);
-            const total   = parseFloat(cols["numeric_mm5e51z3"]||"0")||0;
-            const reserved= parseFloat(cols["numeric_mm5sw1t1"] ||"0")||0;
-            const avail   = Math.max(0, total - reserved);
+            const cols = colMap(item.column_values);
+            // Build subitem detail objects
+            const subs = (item.subitems||[]).map(si => {
+              const sc = colMap(si.column_values);
+              return { id:si.id, name:si.name, status:sc["status"]||"", voltage:sc["dropdown_mm65b542"]||"", manufacturer:sc["dropdown_mm65c7mt"]||"", deliveryDate:sc["date_mm65h7tw"]||"" };
+            });
+            sbl[item.id] = subs;
+            // Count selectable (not Reserved, not Delivered)
+            const selectableCount = subs.filter(s=>!LOCKED_STATUSES.includes(s.status)).length;
             return {
               id:item.id, name:item.name,
-              voltage:cols[P.voltage]||"", manufacturer:cols[P.manufacturer]||"",
-              deliveryDate:cols[P.deliveryDate]||"", availableQty:avail,
-              poLineNum:parseFloat(cols[P.poLineNum]||"0"),
+              voltage:cols["dropdown_mm5ese7e"]||"",
+              manufacturer:cols["dropdown_mm5ef8kt"]||"",
+              deliveryDate:cols["date4"]||"",
+              poLineNum:parseFloat(cols["numeric_mm5sv1e1"]||"0"),
+              selectableCount,
+              totalCount:subs.length,
             };
           });
           lines.sort((a,b)=>a.poLineNum-b.poLineNum);
-          setPoLines(lines); setUsers(ud.users||[]); setScreen("form");
+
+          setPoLines(lines);
+          setSubitemsByLine(sbl);
+          setUsers(ud.users||[]);
+          setScreen("form");
         } catch(e) { setSetupErr("Connection failed: "+e.message); }
         finally { setSetupLoad(false); }
       };
 
-      /* ── Load subitems ── */
-      useEffect(() => {
-        if (!selectedPoLineId||!apiKey) { setSubitems([]); setSelectedIds([]); return; }
-        setSubLoad(true); setSubitems([]); setSelectedIds([]);
-        gql(apiKey, `{ items(ids:[${selectedPoLineId}]) { subitems { id name column_values(ids:["${S.status}","${S.voltage}","${S.manufacturer}","${S.deliveryDate}"]) { id text } } } }`)
-          .then(d => {
-            const raw = d.items?.[0]?.subitems||[];
-            setSubitems(raw.map(si => {
-              const cols = colMap(si.column_values);
-              return { id:si.id, name:si.name, status:cols[S.status]||"", voltage:cols[S.voltage]||"", manufacturer:cols[S.manufacturer]||"", deliveryDate:cols[S.deliveryDate]||"" };
-            }));
-          })
-          .catch(e=>console.error(e))
-          .finally(()=>setSubLoad(false));
-      }, [selectedPoLineId]);
-
-      const available   = subitems.filter(s=>s.status==="Available");
-      const unavailable = subitems.filter(s=>s.status!=="Available");
-      const selectedLine = poLines.find(l=>l.id===selectedPoLineId);
-      const selectedUser = users.find(u=>u.id===form.requesterId);
+      /* ── Derived state from selected line ── */
+      const lineSubitems    = subitemsByLine[selectedPoLineId] || [];
+      const selectable      = lineSubitems.filter(s=>!LOCKED_STATUSES.includes(s.status));
+      const locked          = lineSubitems.filter(s=>LOCKED_STATUSES.includes(s.status));
+      const selectedLine    = poLines.find(l=>l.id===selectedPoLineId);
+      const selectedUser    = users.find(u=>u.id===form.requesterId);
+      const hasQueueItems   = selectedIds.some(id=>QUEUE_STATUSES.includes(selectable.find(s=>s.id===id)?.status||""));
       const toggle = id => setSelectedIds(p=>p.includes(id)?p.filter(x=>x!==id):[...p,id]);
 
       const isValid = form.projectName.trim()&&form.clientName.trim()&&form.requesterId&&
@@ -247,6 +244,7 @@
         if (!isValid) { setSubmitErr("Please complete all required fields and select at least one breaker unit."); return; }
         setSubmitErr(""); setSubmitting(true);
         try {
+          // 1. Create Project Request item
           const cv = {
             "text_mm5es7sz":        form.projectName,
             "short_texthrb2ladn":   form.clientName,
@@ -265,6 +263,21 @@
             `mutation CreateRequest($boardId:ID!,$name:String!,$cv:JSON!,$groupId:String!) { create_item(board_id:$boardId,item_name:$name,column_values:$cv,group_id:$groupId) { id url } }`,
             { boardId:String(REQUESTS_BOARD_ID), name:form.opportunityNumber, cv:JSON.stringify(cv), groupId:"topics" }
           );
+
+          // 2. Update each AVAILABLE breaker to "Pending Review"
+          //    Pending Review / Pending Reservation stay unchanged (already queued)
+          for (const breakerId of selectedIds) {
+            const breaker = selectable.find(s=>s.id===breakerId);
+            if (breaker && breaker.status==="Available") {
+              try {
+                await gql(apiKey,
+                  `mutation($itemId:ID!,$boardId:ID!,$cv:JSON!){ change_multiple_column_values(item_id:$itemId,board_id:$boardId,column_values:$cv,create_labels_if_missing:true){ id } }`,
+                  { itemId:String(breakerId), boardId:String(SUBITEMS_BOARD_ID), cv:JSON.stringify({ status:{ label:"Pending Review" } }) }
+                );
+              } catch(e) { console.error("Status update error:", e.message); }
+            }
+          }
+
           setCreatedItem(result.create_item);
           setScreen("success");
         } catch(e) { setSubmitErr("Submission failed: "+e.message); }
@@ -273,17 +286,21 @@
 
       const reset = () => {
         setForm({ projectName:"", clientName:"", requesterId:"", opportunityNumber:"", estimatedValue:"", breakersEnable:"", dropDeadDate:"" });
-        setSelectedPoLineId(""); setSelectedIds([]); setSubitems([]); setSubmitErr(""); setCreatedItem(null);
+        setSelectedPoLineId(""); setSelectedIds([]); setSubmitErr(""); setCreatedItem(null);
       };
 
-      const voltBadgeClass = v => v==="145"?"vbadge v145":v==="245"?"vbadge v245":"vbadge v362";
+      const VOLT_GROUPS = [
+        { label:"145 kV — GE", key:"145" },
+        { label:"245 kV — GE / Hitachi", key:"245" },
+        { label:"362 kV — Hitachi", key:"362" },
+      ];
 
       /* ── SETUP ── */
       if (screen==="setup") return (
         <div className="setup-wrap">
           <div className="setup-box">
             <div className="setup-logo-row">
-              <div style={{ background:"#002D59", borderRadius:10, width:40, height:40, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+              <div style={{ background:"#002D59", borderRadius:10, width:42, height:42, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
                 <LogoMark/>
               </div>
               <div>
@@ -297,8 +314,7 @@
             </p>
             <label className="bmcd-lbl">Monday.com API Key <span className="bmcd-req">*</span></label>
             <input type="password" value={apiKey} onChange={e=>setApiKey(e.target.value)}
-              onKeyDown={e=>e.key==="Enter"&&handleSetup()}
-              placeholder="eyJhbGciOiJIUzI1Ni..." className="setup-inp" style={{ marginBottom:0 }}/>
+              onKeyDown={e=>e.key==="Enter"&&handleSetup()} placeholder="eyJhbGciOiJIUzI1Ni..." className="setup-inp"/>
             <div className="setup-hint">Profile → Developers → My Access Tokens</div>
             {setupErr && <div className="err-box">{setupErr}</div>}
             <button onClick={handleSetup} disabled={setupLoad} className="setup-btn">
@@ -317,7 +333,7 @@
             </div>
             <div style={{ fontSize:22, fontWeight:800, color:"#002D59", marginBottom:8 }}>Request Submitted!</div>
             <div style={{ color:"#4D6680", fontSize:13, lineHeight:1.6, marginBottom:22 }}>
-              Your request for <strong style={{ color:"#002D59" }}>{form.opportunityNumber}</strong> has been created in Monday.com and sent to the BSF Review Committee. Please check your email for submission details and next steps.
+              Your slot reservation request for <strong style={{ color:"#002D59" }}>{form.opportunityNumber}</strong> has been submitted. Your selected breakers are now marked <strong style={{ color:"#92400E" }}>Pending Review</strong>. Please check your email for submission details and next steps.
             </div>
             <div style={{ background:"#EEF3FC", borderRadius:10, padding:16, marginBottom:22, textAlign:"left" }}>
               <div style={{ fontSize:9, fontWeight:700, color:"#0049CD", marginBottom:10, letterSpacing:".1em" }}>SUBMISSION SUMMARY</div>
@@ -350,19 +366,9 @@
       );
 
       /* ── MAIN FORM ── */
-      const VOLT_GROUPS = [
-        { label:"145 kV — GE", key:"145" },
-        { label:"245 kV — GE / Hitachi", key:"245" },
-        { label:"362 kV — Hitachi", key:"362" },
-      ];
-
-      const reservedPct = selectedLine
-        ? Math.round(((selectedLine.availableQty > 0 ? 0 : 1)) * 100)
-        : 0;
-
       return (
         <div>
-          {/* ── HEADER ── */}
+          {/* Header */}
           <div className="bmcd-header">
             <div className="bmcd-header-inner">
               <div className="bmcd-logo-row">
@@ -373,29 +379,28 @@
                 </div>
               </div>
               <div className="bmcd-eyebrow">HV Circuit Breaker Slot Program</div>
-              <div className="bmcd-hero-title">Reserve Your <span>Breaker Slots.</span><br/>Power Your Projects.</div>
+              <div className="bmcd-hero-title">Slot <span>Reservation</span> Request Form</div>
               <div className="bmcd-neon-bar"/>
-              <div className="bmcd-hero-sub">Submit a reservation request for high-voltage circuit breakers from the Burns &amp; McDonnell slot inventory. Wesco · GE · Hitachi — 145kV, 245kV, 362kV</div>
+              <div className="bmcd-hero-sub">Submit a slot reservation request for high-voltage circuit breakers. Wesco · GE · Hitachi — 145kV, 245kV, 362kV</div>
             </div>
           </div>
 
-          {/* ── STEP INDICATOR ── */}
+          {/* Steps */}
           <div className="bmcd-steps">
-            <div className={`bmcd-step ${!selectedPoLineId ? "active" : "inactive"}`}>
+            <div className={`bmcd-step ${!selectedPoLineId?"active":"inactive"}`}>
               <div className="bmcd-step-num">1</div>
               <div className="bmcd-step-lbl">Project Details</div>
             </div>
             <div className="bmcd-step-div"/>
-            <div className={`bmcd-step ${selectedPoLineId ? "active" : "inactive"}`}>
+            <div className={`bmcd-step ${selectedPoLineId?"active":"inactive"}`}>
               <div className="bmcd-step-num">2</div>
               <div className="bmcd-step-lbl">Breaker Selection</div>
             </div>
           </div>
 
-          {/* ── FORM BODY ── */}
           <div className="bmcd-main">
 
-            {/* Section A — Project Details */}
+            {/* Section A */}
             <div className="bmcd-card">
               <div className="bmcd-card-hdr">
                 <div className="bmcd-card-icon">
@@ -411,13 +416,11 @@
               <div className="g2">
                 <div>
                   <label className="bmcd-lbl">Project Name<span className="bmcd-req">*</span></label>
-                  <input value={form.projectName} onChange={e=>setForm(f=>({...f,projectName:e.target.value}))}
-                    className="std-inp" placeholder="e.g. Riverside Substation Expansion"/>
+                  <input value={form.projectName} onChange={e=>setForm(f=>({...f,projectName:e.target.value}))} className="std-inp" placeholder="e.g. Riverside Substation Expansion"/>
                 </div>
                 <div>
                   <label className="bmcd-lbl">Client Name<span className="bmcd-req">*</span></label>
-                  <input value={form.clientName} onChange={e=>setForm(f=>({...f,clientName:e.target.value}))}
-                    className="std-inp" placeholder="e.g. American Electric Power"/>
+                  <input value={form.clientName} onChange={e=>setForm(f=>({...f,clientName:e.target.value}))} className="std-inp" placeholder="e.g. American Electric Power"/>
                 </div>
               </div>
 
@@ -431,22 +434,18 @@
                 </div>
                 <div>
                   <label className="bmcd-lbl">Opportunity Number<span className="bmcd-req">*</span></label>
-                  <input value={form.opportunityNumber} onChange={e=>setForm(f=>({...f,opportunityNumber:e.target.value}))}
-                    className="std-inp" placeholder="e.g. OPP073319"/>
+                  <input value={form.opportunityNumber} onChange={e=>setForm(f=>({...f,opportunityNumber:e.target.value}))} className="std-inp" placeholder="e.g. OPP073319"/>
                 </div>
               </div>
 
               <div className="g2" style={{ marginBottom:14 }}>
                 <div>
                   <label className="bmcd-lbl">BMcD Estimated Project Value (USD)<span className="bmcd-req">*</span></label>
-                  <input type="number" min="0" value={form.estimatedValue}
-                    onChange={e=>setForm(f=>({...f,estimatedValue:e.target.value}))}
-                    className="std-inp" placeholder="e.g. 5000000"/>
+                  <input type="number" min="0" value={form.estimatedValue} onChange={e=>setForm(f=>({...f,estimatedValue:e.target.value}))} className="std-inp" placeholder="e.g. 5000000"/>
                 </div>
                 <div>
                   <label className="bmcd-lbl">Drop-Dead Customer PO Release Date<span className="bmcd-req">*</span></label>
-                  <input type="date" value={form.dropDeadDate}
-                    onChange={e=>setForm(f=>({...f,dropDeadDate:e.target.value}))} className="std-inp"/>
+                  <input type="date" value={form.dropDeadDate} onChange={e=>setForm(f=>({...f,dropDeadDate:e.target.value}))} className="std-inp"/>
                 </div>
               </div>
 
@@ -462,7 +461,7 @@
               </div>
             </div>
 
-            {/* Section B — Breaker Selection */}
+            {/* Section B */}
             <div className="bmcd-card">
               <div className="bmcd-card-hdr">
                 <div className="bmcd-card-icon">
@@ -470,32 +469,34 @@
                 </div>
                 <div>
                   <div className="bmcd-card-title">Breaker Selection</div>
-                  <div className="bmcd-card-sub">Choose your delivery slot, then select specific units</div>
+                  <div className="bmcd-card-sub">Choose a delivery slot then select specific units — queue positions available for pending breakers</div>
                 </div>
                 <span className="bmcd-step-tag">STEP 02</span>
               </div>
 
-              <p style={{ color:"#4D6680", fontSize:12, lineHeight:1.6, marginBottom:14 }}>
-                Select a delivery slot, then hand-pick the exact breaker units you need.
-                Only <strong>Available</strong> units can be selected.
-              </p>
+              {/* Status legend */}
+              <div className="legend">
+                {[["#1A9B5A","Available — open for reservation"],["#D97706","Pending Review — request in committee"],["#1D4ED8","Pending Reservation — awaiting customer PO"],["#991B1B","Reserved — no longer selectable"]].map(([color,label])=>(
+                  <div key={color} className="legend-item">
+                    <div className="legend-dot" style={{ background:color }}/>
+                    <span>{label}</span>
+                  </div>
+                ))}
+              </div>
 
-              {/* PO Line dropdown */}
+              {/* Dropdown */}
               <label className="bmcd-lbl" style={{ marginBottom:6 }}>Delivery Slot / PO Line<span className="bmcd-req">*</span></label>
-              <select
-                value={selectedPoLineId}
-                onChange={e=>setSelectedPoLineId(e.target.value)}
-                className="std-inp"
-                style={{ fontFamily:"monospace", fontSize:12, marginBottom:4 }}>
+              <select value={selectedPoLineId} onChange={e=>{setSelectedPoLineId(e.target.value);setSelectedIds([]);}}
+                className="std-inp" style={{ fontFamily:"monospace", fontSize:12, marginBottom:4 }}>
                 <option value="">Choose a delivery slot…</option>
-                {VOLT_GROUPS.map(({label, key})=>{
+                {VOLT_GROUPS.map(({label,key})=>{
                   const lines = poLines.filter(l=>String(l.voltage).trim()===key);
                   if (!lines.length) return null;
                   return (
                     <optgroup key={key} label={label}>
                       {lines.map(l=>(
                         <option key={l.id} value={l.id}>
-                          {`Line ${String(l.poLineNum).padStart(2,"0")} — ${l.voltage}kV ${l.manufacturer} — Delivery ${l.deliveryDate} — ${l.availableQty} avail${l.availableQty<=0?" (FULL)":""}`}
+                          {`Line ${String(l.poLineNum).padStart(2,"0")} — ${l.voltage}kV ${l.manufacturer} — Delivery ${l.deliveryDate} — ${l.selectableCount} of ${l.totalCount} selectable`}
                         </option>
                       ))}
                     </optgroup>
@@ -503,131 +504,113 @@
                 })}
                 {poLines.filter(l=>!["145","245","362"].includes(String(l.voltage).trim())).map(l=>(
                   <option key={l.id} value={l.id}>
-                    {`Line ${String(l.poLineNum).padStart(2,"0")} — ${l.voltage}kV ${l.manufacturer} — Delivery ${l.deliveryDate} — ${l.availableQty} avail`}
+                    {`Line ${String(l.poLineNum).padStart(2,"0")} — ${l.voltage}kV ${l.manufacturer} — Delivery ${l.deliveryDate} — ${l.selectableCount} of ${l.totalCount} selectable`}
                   </option>
                 ))}
               </select>
 
-              {/* Breaker picker */}
               {selectedPoLineId && (
-                <div style={{ marginTop:18 }}>
-                  {subLoad ? (
-                    <div style={{ textAlign:"center", padding:24, color:"#94A3B8", fontSize:13 }}>Loading breaker units…</div>
-                  ) : (
-                    <>
-                      {/* Capacity bar */}
-                      {selectedLine && (
-                        <div className="cap-wrap">
-                          <div className="cap-row">
-                            <span>{selectedLine.name}</span>
-                            <span className="cap-green">{selectedLine.availableQty} of {selectedLine.availableQty + (subitems.length - available.length)} units available</span>
-                          </div>
-                          <div className="cap-track">
-                            <div className="cap-fill" style={{ width:`${available.length>0?Math.round((available.length/(available.length+unavailable.length||1))*100):0}%` }}/>
-                          </div>
+                <div style={{ marginTop:14 }}>
+                  {/* Capacity bar */}
+                  <div className="cap-wrap">
+                    <div className="cap-row">
+                      <span>{selectedLine?.name} — Slot Availability</span>
+                      <span style={{ color:"#1A9B5A", fontWeight:700 }}>{selectable.length} of {lineSubitems.length} selectable</span>
+                    </div>
+                    <div className="cap-track">
+                      <div className="cap-fill" style={{ width:`${lineSubitems.length>0?Math.round((selectable.length/lineSubitems.length)*100):0}%`, background:"linear-gradient(90deg,#0049CD,#0066FF)" }}/>
+                    </div>
+                  </div>
+
+                  {/* Banner */}
+                  {(()=>{
+                    let bg,bc,color,msg;
+                    if (selectable.length===0){bg="#FEF2F2";bc="#FECACA";color="#DC2626";msg="No selectable breakers on this line. All units are Reserved or Delivered.";}
+                    else if (selectedIds.length===0){bg="#FFFBEB";bc="#FDE68A";color="#D97706";msg=`${selectable.length} selectable unit${selectable.length!==1?"s":""} available — green units are open, amber/blue units have pending requests but can be queued.`;}
+                    else{bg="#E6F9EE";bc="#6DD19A";color="#1A9B5A";msg=`${selectedIds.length} unit${selectedIds.length!==1?"s":""} selected.${hasQueueItems?" Some are in queue — you will be placed in line for committee review.":""}`;}
+                    return <div style={{ background:bg, border:`1px solid ${bc}`, borderRadius:8, padding:"9px 14px", marginBottom:12, fontSize:12, color, fontWeight:500 }}>{msg}</div>;
+                  })()}
+
+                  {/* Queue notice */}
+                  {hasQueueItems && (
+                    <div className="queue-notice">
+                      <strong>Queue Notice:</strong> One or more of your selected breakers already has a pending request. Submitting will place you in the Monday.com queue. If the original request falls through, the committee will allocate these breakers to the next in line automatically.
+                    </div>
+                  )}
+
+                  {/* Selectable breakers */}
+                  {selectable.length > 0 && (
+                    <div style={{ border:"1px solid #D4DCE6", borderRadius:8, overflow:"hidden", marginBottom:8 }}>
+                      <div style={{ background:"#F0F4F8", padding:"7px 14px", fontSize:9, fontWeight:700, color:"#4D6680", letterSpacing:".1em", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                        <span>SELECTABLE UNITS — SELECT ALL YOU NEED</span>
+                        <span style={{ fontWeight:400, color:"#94A3B8" }}>{selectedIds.length}/{selectable.length} selected</span>
+                      </div>
+                      {selectable.length > 1 && (
+                        <div style={{ padding:"7px 14px", borderBottom:"1px solid #D4DCE6", display:"flex", gap:12, background:"#fff" }}>
+                          <button onClick={()=>setSelectedIds(selectable.map(s=>s.id))} style={{ fontSize:11, color:"#0049CD", background:"none", border:"none", cursor:"pointer", padding:0, fontWeight:600 }}>Select all {selectable.length}</button>
+                          <span style={{ color:"#D4DCE6" }}>|</span>
+                          <button onClick={()=>setSelectedIds([])} style={{ fontSize:11, color:"#94A3B8", background:"none", border:"none", cursor:"pointer", padding:0 }}>Clear</button>
                         </div>
                       )}
-
-                      {/* Status banner */}
-                      {(()=>{
-                        let bg,bc,color,msg;
-                        if (available.length===0){bg="#FEF2F2";bc="#FECACA";color="#DC2626";msg="No available breakers on this line — choose a different slot or contact procurement.";}
-                        else if (selectedIds.length===0){bg="#FFFBEB";bc="#FDE68A";color="#D97706";msg=`${available.length} breaker${available.length!==1?"s":""} available — select the units you need below.`;}
-                        else{bg="#E6F9EE";bc="#6DD19A";color="#1A9B5A";msg=`${selectedIds.length} of ${available.length} available breaker${available.length!==1?"s":""} selected.`;}
-                        return <div style={{ background:bg, border:`1px solid ${bc}`, borderRadius:8, padding:"9px 14px", marginBottom:12, fontSize:12, color, fontWeight:500 }}>{msg}</div>;
-                      })()}
-
-                      {available.length > 0 && (
-                        <>
-                          {/* Counter */}
-                          <div className="counter">
-                            <div>
-                              <div className="c-lbl">Units Selected</div>
-                              <div className="c-num">{selectedIds.length}<span className="c-of">of {available.length}</span></div>
+                      {selectable.map(b=>{
+                        const checked = selectedIds.includes(b.id);
+                        const ss = statusStyle(b.status);
+                        return (
+                          <label key={b.id} className={biClass(b.status, checked)} style={{ display:"flex" }}>
+                            <div className={cboxClass(b.status, checked)}>
+                              {checked && <span style={{ color:"#fff", fontSize:11, fontWeight:700 }}>✓</span>}
                             </div>
-                            <div>
-                              {available.length > 1 && (
-                                <div style={{ display:"flex", gap:12, justifyContent:"flex-end", marginBottom:4 }}>
-                                  <button onClick={()=>setSelectedIds(available.map(s=>s.id))}
-                                    style={{ fontSize:11, color:"#E6F001", background:"none", border:"none", cursor:"pointer", padding:0, fontWeight:600 }}>
-                                    Select all {available.length}
-                                  </button>
-                                  <span style={{ color:"rgba(255,255,255,.3)" }}>|</span>
-                                  <button onClick={()=>setSelectedIds([])}
-                                    style={{ fontSize:11, color:"rgba(255,255,255,.55)", background:"none", border:"none", cursor:"pointer", padding:0 }}>
-                                    Clear
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Breaker checkboxes */}
-                          <div style={{ marginBottom:6 }}>
-                            <div style={{ background:"#F0F4F8", padding:"7px 14px", fontSize:9, fontWeight:700, color:"#4D6680", letterSpacing:".1em", borderRadius:"7px 7px 0 0", borderBottom:"1px solid #D4DCE6" }}>
-                              AVAILABLE UNITS — SELECT ALL YOU NEED
-                            </div>
-                            {available.map((b,i)=>{
-                              const chk = selectedIds.includes(b.id);
-                              return (
-                                <label key={b.id} className={`bi ${chk?"chk":"unchk"}`}
-                                  style={{ borderRadius:i===available.length-1?"0 0 7px 7px":"0", borderTop:i===0?"none":"1px solid #E8EDF4" }}>
-                                  <div className={`cbox ${chk?"on":"off"}`}>
-                                    {chk && <span style={{ color:"#fff", fontSize:11, fontWeight:700 }}>✓</span>}
-                                  </div>
-                                  <input type="checkbox" checked={chk} onChange={()=>toggle(b.id)} style={{ display:"none" }}/>
-                                  <div style={{ flex:1 }}>
-                                    <div style={{ fontWeight:600, color:"#002D59", fontSize:13 }}>{b.name}</div>
-                                    <div style={{ fontSize:11, color:"#94A3B8", marginTop:1 }}>
-                                      {[b.voltage&&`${b.voltage}kV`, b.manufacturer, b.deliveryDate&&`Delivery: ${b.deliveryDate}`].filter(Boolean).join(" · ")}
-                                    </div>
-                                  </div>
-                                  <span style={{ fontSize:10, fontWeight:700, color:"#1A9B5A", background:"#E6F9EE", padding:"2px 8px", borderRadius:20, flexShrink:0 }}>Available</span>
-                                </label>
-                              );
-                            })}
-                          </div>
-                        </>
-                      )}
-
-                      {/* Unavailable (collapsible) */}
-                      {unavailable.length > 0 && (
-                        <details style={{ marginTop:8 }}>
-                          <summary style={{ fontSize:11, color:"#94A3B8", cursor:"pointer", padding:"3px 0" }}>
-                            {unavailable.length} unavailable unit{unavailable.length!==1?"s":""} on this line (shown for transparency)
-                          </summary>
-                          <div style={{ border:"1px solid #D4DCE6", borderRadius:8, marginTop:6, overflow:"hidden", opacity:.5 }}>
-                            {unavailable.map((b,i)=>(
-                              <div key={b.id} style={{ display:"flex", alignItems:"center", gap:11, padding:"10px 14px", borderBottom:i<unavailable.length-1?"1px solid #E8EDF4":"none" }}>
-                                <div style={{ width:18, flexShrink:0 }}/>
-                                <div style={{ flex:1 }}>
-                                  <div style={{ fontWeight:500, color:"#94A3B8", fontSize:12 }}>{b.name}</div>
-                                  <div style={{ fontSize:11, color:"#B4C4D4" }}>{[b.voltage&&`${b.voltage}kV`,b.manufacturer].filter(Boolean).join(" · ")}</div>
-                                </div>
-                                <span style={{ fontSize:10, fontWeight:700, color:"#94A3B8", background:"#F1F5F9", padding:"2px 8px", borderRadius:20 }}>{b.status||"Unavailable"}</span>
+                            <input type="checkbox" checked={checked} onChange={()=>toggle(b.id)} style={{ display:"none" }}/>
+                            <div style={{ flex:1 }}>
+                              <div style={{ fontWeight:600, color:"#002D59", fontSize:13 }}>{b.name}</div>
+                              <div style={{ fontSize:11, color:"#94A3B8", marginTop:1 }}>
+                                {[b.voltage&&`${b.voltage}kV`, b.manufacturer, b.deliveryDate&&`Delivery: ${b.deliveryDate}`].filter(Boolean).join(" · ")}
                               </div>
-                            ))}
-                          </div>
-                        </details>
-                      )}
-                    </>
+                            </div>
+                            <span style={{ fontSize:10, fontWeight:700, color:ss.color, background:ss.bg, padding:"2px 8px", borderRadius:20, flexShrink:0, alignSelf:"center" }}>{ss.label}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Locked (not selectable) */}
+                  {locked.length > 0 && (
+                    <details style={{ marginTop:8 }}>
+                      <summary style={{ fontSize:11, color:"#94A3B8", cursor:"pointer", padding:"3px 0" }}>
+                        {locked.length} locked unit{locked.length!==1?"s":""} on this line (Reserved or Delivered — not selectable)
+                      </summary>
+                      <div style={{ border:"1px solid #D4DCE6", borderRadius:8, marginTop:6, overflow:"hidden", opacity:.5 }}>
+                        {locked.map((b,i)=>{
+                          const ss = statusStyle(b.status);
+                          return (
+                            <div key={b.id} style={{ display:"flex", alignItems:"center", gap:11, padding:"10px 14px", borderBottom:i<locked.length-1?"1px solid #E8EDF4":"none" }}>
+                              <div style={{ width:18, flexShrink:0 }}/>
+                              <div style={{ flex:1 }}>
+                                <div style={{ fontWeight:500, color:"#94A3B8", fontSize:12 }}>{b.name}</div>
+                                <div style={{ fontSize:11, color:"#B4C4D4" }}>{[b.voltage&&`${b.voltage}kV`,b.manufacturer].filter(Boolean).join(" · ")}</div>
+                              </div>
+                              <span style={{ fontSize:10, fontWeight:700, color:ss.color, background:ss.bg, padding:"2px 8px", borderRadius:20 }}>{ss.label}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </details>
                   )}
                 </div>
               )}
             </div>
 
-            {/* Submit zone */}
+            {/* Submit */}
             <div className="submit-zone">
               {submitErr && <div className="err-box" style={{ marginBottom:14 }}>{submitErr}</div>}
               <div className="submit-inner">
                 <div className="submit-text">
-                  <strong>Ready to submit.</strong> Your request for {selectedIds.length || "your"} breaker unit{selectedIds.length!==1?"s":""}{selectedLine?` on ${selectedLine.name}`:""} will be routed to the BSF Review Committee for review. Please check your email for submission details and next steps.
+                  <strong>Ready to submit.</strong> Your request for {selectedIds.length||"your"} breaker unit{selectedIds.length!==1?"s":""}{selectedLine?` on ${selectedLine.name}`:""} will be routed to the BSF Review Committee for review. Please check your email for submission details and next steps.
                 </div>
-                <button
-                  onClick={handleSubmit}
-                  disabled={!isValid||submitting}
+                <button onClick={handleSubmit} disabled={!isValid||submitting}
                   className={isValid&&!submitting?"submit-btn-active":"submit-btn-dis"}>
-                  {submitting ? "Submitting…" : isValid ? `Submit Request — ${selectedIds.length} Unit${selectedIds.length!==1?"s":""}` : "Submit Request"}
+                  {submitting?"Submitting…":isValid?`Submit Request — ${selectedIds.length} Unit${selectedIds.length!==1?"s":""}`:"Submit Request"}
                 </button>
               </div>
               {!isValid && (
