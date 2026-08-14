@@ -3,53 +3,650 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Breaker Slot Request — Burns & McDonnell</title>
+  <title>Breaker Slot Request — Burns &amp; McDonnell</title>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: #f8fafc; font-family: system-ui, -apple-system, sans-serif; }
+    body { background: #E2E8F0; font-family: system-ui, -apple-system, sans-serif; }
     select, input, textarea, button { font-family: inherit; }
+
+    /* Header */
+    .bmcd-header { background: #002D59; position: relative; overflow: hidden; padding: 28px 36px 40px; }
+    .bmcd-header::before { content:''; position:absolute; top:0; left:0; right:0; bottom:0;
+      background-image: repeating-linear-gradient(-55deg,transparent,transparent 18px,rgba(0,73,205,0.35) 18px,rgba(0,73,205,0.35) 22px);
+      pointer-events:none; }
+    .bmcd-header-inner { position:relative; z-index:1; }
+    .bmcd-logo-row { display:flex; align-items:center; gap:14px; margin-bottom:26px; }
+    .bmcd-logo-wordmark { color:#fff; }
+    .bmcd-logo-wordmark .brand { font-size:16px; font-weight:800; letter-spacing:.05em; display:block; line-height:1.1; }
+    .bmcd-logo-wordmark .est { font-size:9px; letter-spacing:.18em; color:rgba(255,255,255,.55); font-weight:400; margin-top:3px; display:block; }
+    .bmcd-eyebrow { font-size:10px; font-weight:700; letter-spacing:.14em; color:#E6F001; text-transform:uppercase; margin-bottom:10px; }
+    .bmcd-hero-title { font-size:28px; font-weight:800; color:#fff; line-height:1.18; margin-bottom:4px; }
+    .bmcd-hero-title span { color:#E6F001; }
+    .bmcd-neon-bar { width:44px; height:4px; background:#E6F001; margin:12px 0 10px; border-radius:2px; }
+    .bmcd-hero-sub { font-size:12px; color:rgba(255,255,255,.62); max-width:520px; line-height:1.55; }
+
+    /* Step indicator */
+    .bmcd-steps { background:#0049CD; padding:0 36px; display:flex; align-items:center; }
+    .bmcd-step { display:flex; align-items:center; gap:9px; padding:13px 0; padding-right:28px; position:relative; }
+    .bmcd-step.active::after { content:''; position:absolute; bottom:0; left:0; right:0; height:3px; background:#E6F001; border-radius:2px 2px 0 0; }
+    .bmcd-step-num { width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; flex-shrink:0; }
+    .bmcd-step.active .bmcd-step-num { background:#E6F001; color:#002D59; }
+    .bmcd-step.inactive .bmcd-step-num { background:rgba(255,255,255,.2); color:rgba(255,255,255,.55); }
+    .bmcd-step-lbl { font-size:11px; font-weight:600; }
+    .bmcd-step.active .bmcd-step-lbl { color:#fff; }
+    .bmcd-step.inactive .bmcd-step-lbl { color:rgba(255,255,255,.45); }
+    .bmcd-step-div { width:20px; height:1px; background:rgba(255,255,255,.25); margin-right:14px; }
+
+    /* Cards */
+    .bmcd-card { background:#fff; border-radius:12px; padding:22px 26px; border:1px solid #D4DCE6; box-shadow:0 2px 14px rgba(0,45,89,.07); margin-bottom:18px; }
+    .bmcd-card-hdr { display:flex; align-items:center; gap:12px; margin-bottom:20px; padding-bottom:14px; border-bottom:1px solid #E8EDF4; }
+    .bmcd-card-icon { width:36px; height:36px; border-radius:8px; background:#EEF3FC; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .bmcd-card-title { font-size:14px; font-weight:700; color:#002D59; }
+    .bmcd-card-sub { font-size:11px; color:#A1AFB3; margin-top:1px; }
+    .bmcd-step-tag { font-size:9px; font-weight:700; letter-spacing:.1em; color:#0049CD; background:#EEF3FC; padding:2px 8px; border-radius:4px; margin-left:auto; }
+
+    /* Field labels */
+    .bmcd-lbl { display:block; font-size:10px; font-weight:700; color:#4D6680; letter-spacing:.07em; text-transform:uppercase; margin-bottom:5px; }
+    .bmcd-req { color:#DC2626; margin-left:2px; }
+
+    /* PO Line slot cards */
+    .slot-card { display:flex; align-items:center; gap:10px; padding:11px 14px; border-radius:8px; margin-bottom:5px; cursor:pointer; border:1.5px solid transparent; transition:all .15s; }
+    .slot-card.sel { background:#EEF3FC; border-color:#0049CD; }
+    .slot-card.unsel { background:#F6F8FA; border-color:#D4DCE6; }
+    .slot-card.unsel:hover { background:#EEF3FC; border-color:#B0C4E8; }
+    .vbadge { font-size:9px; font-weight:800; padding:3px 8px; border-radius:5px; flex-shrink:0; letter-spacing:.05em; }
+    .v145 { background:#E6F0FF; color:#0049CD; }
+    .v245 { background:#E0F5FF; color:#006699; }
+    .v362 { background:#FFF8E6; color:#A06B00; }
+    .slot-name { font-size:12px; font-weight:600; color:#002D59; }
+    .slot-meta { font-size:11px; color:#A1AFB3; margin-top:1px; }
+    .slot-avail { margin-left:auto; font-size:10px; font-weight:700; color:#1A9B5A; background:#E6F9EE; padding:2px 9px; border-radius:20px; flex-shrink:0; white-space:nowrap; }
+    .slot-avail.zero { color:#64748b; background:#F1F5F9; }
+
+    /* Voltage group header */
+    .vgrp-hdr { font-size:9px; font-weight:700; letter-spacing:.12em; color:#94A3B8; text-transform:uppercase; padding:6px 0 3px; margin-top:6px; }
+
+    /* Capacity bar */
+    .cap-wrap { background:#F0F4F8; border-radius:8px; padding:12px 14px; margin:10px 0 16px; }
+    .cap-row { display:flex; justify-content:space-between; font-size:10px; font-weight:600; color:#4D6680; margin-bottom:7px; }
+    .cap-green { color:#1A9B5A; }
+    .cap-track { height:7px; background:#D4DCE6; border-radius:99px; overflow:hidden; }
+    .cap-fill { height:100%; background:linear-gradient(90deg,#0049CD,#0066FF); border-radius:99px; }
+
+    /* Counter banner */
+    .counter { background:linear-gradient(90deg,#0049CD,#0066FF); border-radius:8px; padding:12px 16px; display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+    .c-lbl { font-size:11px; color:rgba(255,255,255,.75); margin-bottom:1px; }
+    .c-num { font-size:21px; font-weight:800; color:#E6F001; line-height:1; }
+    .c-of { font-size:12px; font-weight:400; color:rgba(255,255,255,.5); margin-left:4px; }
+    .c-price-lbl { font-size:10px; color:rgba(255,255,255,.6); text-align:right; }
+    .c-price { font-size:15px; font-weight:700; color:#fff; text-align:right; }
+
+    /* Breaker items */
+    .bi { display:flex; align-items:center; gap:11px; padding:11px 14px; border-radius:8px; margin-bottom:4px; border:1.5px solid transparent; cursor:pointer; transition:background .1s; }
+    .bi.chk { background:#E6F9EE; border-color:#6DD19A; }
+    .bi.unchk { background:#F6F8FA; border-color:#D4DCE6; }
+    .bi.unchk:hover { background:#F0F4F8; }
+    .cbox { width:18px; height:18px; border-radius:5px; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+    .cbox.on { background:#1A9B5A; }
+    .cbox.off { background:#fff; border:2px solid #B4C4D4; }
+
+    /* Submit area */
+    .submit-zone { background:#002D59; border-radius:12px; padding:22px 26px; margin-bottom:16px; }
+    .submit-inner { display:flex; align-items:center; justify-content:space-between; gap:20px; }
+    .submit-text { color:rgba(255,255,255,.7); font-size:12px; line-height:1.6; max-width:420px; }
+    .submit-text strong { color:#E6F001; }
+    .submit-btn-active { background:#E6F001; color:#002D59; border:none; border-radius:8px; padding:14px 28px; font-size:14px; font-weight:800; cursor:pointer; white-space:nowrap; flex-shrink:0; letter-spacing:.01em; }
+    .submit-btn-dis { background:#4D6680; color:rgba(255,255,255,.4); border:none; border-radius:8px; padding:14px 28px; font-size:14px; font-weight:700; cursor:not-allowed; white-space:nowrap; flex-shrink:0; }
+    .bmcd-footer { text-align:center; padding:16px 0 24px; font-size:10px; color:#94A3B8; letter-spacing:.07em; }
+
+    /* Error box */
+    .err-box { background:#FEF2F2; border:1px solid #FECACA; color:#DC2626; border-radius:8px; padding:10px 14px; font-size:13px; margin-bottom:12px; }
+
+    /* Setup & Success screens */
+    .setup-wrap { min-height:100vh; background:#E2E8F0; display:flex; align-items:center; justify-content:center; padding:24px; }
+    .setup-box { background:#fff; border-radius:14px; box-shadow:0 4px 28px rgba(0,45,89,.12); padding:40px; max-width:470px; width:100%; }
+    .setup-logo-row { display:flex; align-items:center; gap:13px; margin-bottom:6px; }
+    .setup-divider { height:1px; background:#E8EDF4; margin:18px 0 22px; }
+    .setup-inp { width:100%; padding:10px 13px; border:1.5px solid #D4DCE6; border-radius:7px; font-size:14px; color:#002D59; outline:none; background:#F8FAFB; }
+    .setup-inp:focus { border-color:#0049CD; background:#fff; box-shadow:0 0 0 3px rgba(0,73,205,.1); }
+    .setup-hint { font-size:11px; color:#94A3B8; margin-top:4px; margin-bottom:18px; }
+    .setup-btn { background:#0049CD; color:#fff; border:none; border-radius:8px; padding:13px 24px; font-size:14px; font-weight:700; cursor:pointer; width:100%; margin-top:6px; }
+    .setup-btn:disabled { opacity:.6; cursor:wait; }
+
+    /* Main layout */
+    .bmcd-main { padding:24px 36px; max-width:880px; margin:0 auto; }
+    .g2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:14px; }
+    .g3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:14px; }
+    .g1 { display:grid; grid-template-columns:1fr; gap:16px; margin-bottom:0; }
+    .std-inp { width:100%; padding:9px 12px; border:1.5px solid #D4DCE6; border-radius:7px; font-size:13px; color:#1e293b; outline:none; background:#F8FAFB; }
+    .std-inp:focus { border-color:#0049CD; background:#fff; box-shadow:0 0 0 3px rgba(0,73,205,.1); }
   </style>
 </head>
 <body>
   <div id="root"></div>
   <script type="text/babel">
     const { useState, useEffect } = React;
-    const MONDAY_API="https://api.monday.com/v2",SLOT_BOARD_ID=18422871700,REQUESTS_BOARD_ID=18422875681,SUBITEMS_BOARD_ID=18426331487;
-    const P={voltage:"dropdown_mm5ese7e",manufacturer:"dropdown_mm5ef8kt",deliveryDate:"date4",availableQty:"formula_mm5scfte",poLineNum:"numeric_mm5sv1e1",status:"status"};
-    const S={status:"status",voltage:"dropdown_mm65b542",manufacturer:"dropdown_mm65c7mt",deliveryDate:"date_mm65h7tw"};
-    async function gql(apiKey,query,variables={}){const res=await fetch(MONDAY_API,{method:"POST",headers:{"Content-Type":"application/json",Authorization:apiKey},body:JSON.stringify({query,variables})});if(!res.ok)throw new Error(`HTTP ${res.status}`);const json=await res.json();if(json.errors)throw new Error(json.errors[0].message);return json.data;}
-    function colMap(cvs){const m={};cvs.forEach(c=>{m[c.id]=c.text;});return m;}
-    const C={primary:"#003087",green:"#00703C",danger:"#dc2626",warn:"#d97706",border:"#e2e8f0",light:"#f8fafc"};
-    const lbl={display:"block",fontSize:13,fontWeight:600,color:"#374151",marginBottom:5};
-    const inp={width:"100%",padding:"9px 12px",border:`1px solid #e2e8f0`,borderRadius:7,fontSize:14,color:"#1e293b",outline:"none",background:"#fff"};
-    const crd={background:"#fff",borderRadius:12,boxShadow:"0 1px 8px rgba(0,0,0,0.07)",padding:"24px 28px",marginBottom:20};
-    const sh={fontSize:16,fontWeight:700,color:"#003087",marginBottom:18,paddingBottom:12,borderBottom:"1px solid #e2e8f0"};
-    const g2={display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16};
-    const bp=(dis)=>({background:dis?"#94a3b8":"#003087",color:"#fff",border:"none",borderRadius:8,padding:"13px 24px",fontSize:15,fontWeight:600,cursor:dis?"not-allowed":"pointer",width:"100%",opacity:dis?0.5:1});
-    const bs={background:"#f1f5f9",color:"#334155",border:"1px solid #e2e8f0",borderRadius:8,padding:"11px 24px",fontSize:14,fontWeight:500,cursor:"pointer",width:"100%"};
-    const eb={background:"#fef2f2",border:"1px solid #fecaca",color:"#dc2626",borderRadius:8,padding:"10px 14px",fontSize:13,marginBottom:14};
-    const bdg=(color,bg)=>({fontSize:11,fontWeight:700,color,background:bg,padding:"2px 8px",borderRadius:99,whiteSpace:"nowrap",flexShrink:0});
-    function App(){
-      const [apiKey,setApiKey]=useState("");const [setupLoad,setSetupLoad]=useState(false);const [setupErr,setSetupErr]=useState("");const [screen,setScreen]=useState("setup");
-      const [poLines,setPoLines]=useState([]);const [users,setUsers]=useState([]);
-      const [selectedPoLineId,setSelectedPoLineId]=useState("");const [subitems,setSubitems]=useState([]);const [subLoad,setSubLoad]=useState(false);const [selectedIds,setSelectedIds]=useState([]);
-      const [form,setForm]=useState({projectName:"",clientName:"",requesterId:"",opportunityNumber:"",estimatedValue:"",breakersEnable:"",dropDeadDate:""});
-      const [submitting,setSubmitting]=useState(false);const [submitErr,setSubmitErr]=useState("");const [createdItem,setCreatedItem]=useState(null);
-      const handleSetup=async()=>{if(!apiKey.trim()){setSetupErr("API key is required.");return;}setSetupErr("");setSetupLoad(true);try{const[bd,ud]=await Promise.all([gql(apiKey,`{boards(ids:[${SLOT_BOARD_ID}]){items_page(limit:50){items{id name group{title}column_values(ids:["${P.voltage}","${P.manufacturer}","${P.deliveryDate}","${P.poLineNum}","${P.status}","numeric_mm5e51z3","numeric_mm5sw1t1"]){id text}}}}}`),gql(apiKey,`{users(kind:all,limit:500){id name email}}`)]);const lines=bd.boards[0].items_page.items.map(item=>{const cols=colMap(item.column_values);const total=parseFloat(cols["numeric_mm5e51z3"]||"0")||0;const reserved=parseFloat(cols["numeric_mm5sw1t1"]||"0")||0;const avail=Math.max(0,total-reserved);return{id:item.id,name:item.name,voltage:cols[P.voltage]||"",manufacturer:cols[P.manufacturer]||"",deliveryDate:cols[P.deliveryDate]||"",availableQty:avail,poLineNum:parseFloat(cols[P.poLineNum]||"0"),group:item.group?.title||""};});lines.sort((a,b)=>a.poLineNum-b.poLineNum);setPoLines(lines);setUsers(ud.users||[]);setScreen("form");}catch(e){setSetupErr("Connection failed: "+e.message);}finally{setSetupLoad(false);}};
-      useEffect(()=>{if(!selectedPoLineId||!apiKey){setSubitems([]);setSelectedIds([]);return;}setSubLoad(true);setSubitems([]);setSelectedIds([]);gql(apiKey,`{items(ids:[${selectedPoLineId}]){subitems{id name column_values(ids:["${S.status}","${S.voltage}","${S.manufacturer}","${S.deliveryDate}"]){id text}}}}`).then(d=>{const raw=d.items?.[0]?.subitems||[];setSubitems(raw.map(si=>{const cols=colMap(si.column_values);return{id:si.id,name:si.name,status:cols[S.status]||"",voltage:cols[S.voltage]||"",manufacturer:cols[S.manufacturer]||"",deliveryDate:cols[S.deliveryDate]||""};}))}). catch(e=>console.error(e)).finally(()=>setSubLoad(false));},[selectedPoLineId]);
-      const available=subitems.filter(s=>s.status==="Available");const unavailable=subitems.filter(s=>s.status!=="Available");const selectedLine=poLines.find(l=>l.id===selectedPoLineId);const selectedUser=users.find(u=>u.id===form.requesterId);const toggle=id=>setSelectedIds(p=>p.includes(id)?p.filter(x=>x!==id):[...p,id]);
-      const isValid=form.projectName.trim()&&form.clientName.trim()&&form.requesterId&&form.opportunityNumber.trim()&&form.estimatedValue&&form.breakersEnable&&form.dropDeadDate&&selectedPoLineId&&selectedIds.length>0;
-      const handleSubmit=async()=>{if(!isValid){setSubmitErr("Please complete all required fields and select at least one breaker unit.");return;}setSubmitErr("");setSubmitting(true);try{const cv={"text_mm5es7sz":form.projectName,"short_texthrb2ladn":form.clientName,"short_textfukcenx9":form.opportunityNumber,"number8jhwmqe9":parseFloat(form.estimatedValue)||0,"numeric_mm5es9c9":selectedIds.length,"text_mm66tjan":selectedIds.join("|"),"peopleda149l5r":{personsAndTeams:[{id:parseInt(form.requesterId),kind:"person"}]},"single_selectjej2zay":{label:form.breakersEnable},"date3z59ugdu":{date:form.dropDeadDate},"status":{label:"Working on it"},"board_relation_mm5e11py":{item_ids:[parseInt(selectedPoLineId)]},"board_relation_mm65ppt4":{item_ids:selectedIds.map(Number)}};const result=await gql(apiKey,`mutation CreateRequest($boardId:ID!,$name:String!,$cv:JSON!,$groupId:String!){create_item(board_id:$boardId,item_name:$name,column_values:$cv,group_id:$groupId){id url}}`,{boardId:String(REQUESTS_BOARD_ID),name:form.opportunityNumber,cv:JSON.stringify(cv),groupId:"topics"});setCreatedItem(result.create_item);setScreen("success");}catch(e){setSubmitErr("Submission failed: "+e.message);}finally{setSubmitting(false);}};
-      const reset=()=>{setForm({projectName:"",clientName:"",requesterId:"",opportunityNumber:"",estimatedValue:"",breakersEnable:"",dropDeadDate:""});setSelectedPoLineId("");setSelectedIds([]);setSubitems([]);setSubmitErr("");setCreatedItem(null);};
-      const VOLTAGE_GROUPS=[{label:"145 kV (GE)",key:"145"},{label:"245 kV (GE / Hitachi)",key:"245"},{label:"362 kV (Hitachi)",key:"362"}];
-      if(screen==="setup")return(<div style={{minHeight:"100vh",background:C.light,display:"flex",alignItems:"center",justifyContent:"center",padding:24}}><div style={{background:"#fff",borderRadius:12,boxShadow:"0 4px 24px rgba(0,0,0,0.10)",padding:40,maxWidth:460,width:"100%"}}><div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20}}><div style={{width:42,height:42,background:C.primary,borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><svg width="22" height="22" fill="none" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="#fff" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/></svg></div><div><div style={{fontSize:18,fontWeight:700,color:C.primary}}>Breaker Slot Request</div><div style={{fontSize:12,color:"#64748b"}}>Burns &amp; McDonnell — HV Circuit Breaker Program</div></div></div><div style={{height:1,background:C.border,marginBottom:20}}/><p style={{color:"#475569",fontSize:13,marginBottom:22,lineHeight:1.6}}>Enter your Monday.com API key to connect. Your key is held only in memory for this session.</p><label style={lbl}>Monday.com API Key <span style={{color:C.danger}}>*</span></label><input type="password" value={apiKey} onChange={e=>setApiKey(e.target.value)} onKeyDown={e=>e.key==="Enter"&&handleSetup()} placeholder="eyJhbGciOiJIUzI1Ni..." style={{...inp,marginBottom:4}}/><div style={{fontSize:11,color:"#94a3b8",marginBottom:22}}>Profile → Developers → My Access Tokens</div>{setupErr&&<div style={eb}>{setupErr}</div>}<button onClick={handleSetup} disabled={setupLoad} style={bp(setupLoad)}>{setupLoad?"Connecting…":"Connect & Open Form →"}</button></div></div>);
-      if(screen==="success")return(<div style={{minHeight:"100vh",background:C.light,display:"flex",alignItems:"center",justifyContent:"center",padding:24}}><div style={{background:"#fff",borderRadius:12,boxShadow:"0 4px 24px rgba(0,0,0,0.10)",padding:40,maxWidth:520,width:"100%",textAlign:"center"}}><div style={{width:64,height:64,background:"#dcfce7",borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 20px"}}><svg width="32" height="32" fill="none" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" stroke={C.green} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg></div><div style={{fontSize:22,fontWeight:700,color:C.primary,marginBottom:8}}>Request Submitted!</div><div style={{color:"#475569",fontSize:14,lineHeight:1.6,marginBottom:24}}>Your request for <strong>{form.opportunityNumber}</strong> is in Monday.com and with the BSF Review Committee.</div><div style={{background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:8,padding:16,marginBottom:24,textAlign:"left"}}><div style={{fontSize:11,fontWeight:700,color:"#0369a1",marginBottom:10,letterSpacing:"0.05em"}}>SUMMARY</div>{[["Project",form.projectName],["Client",form.clientName],["Opportunity #",form.opportunityNumber],["PO Line",selectedLine?.name||"—"],["Breakers Selected",`${selectedIds.length} unit${selectedIds.length!==1?"s":""}`],["Requester",selectedUser?.name||"—"]].map(([k,v])=>(<div key={k} style={{display:"flex",justifyContent:"space-between",fontSize:13,color:"#334155",marginBottom:6,gap:12}}><span style={{color:"#64748b"}}>{k}</span><span style={{fontWeight:500}}>{v}</span></div>))}{createdItem?.url&&<a href={createdItem.url} target="_blank" rel="noreferrer" style={{display:"block",marginTop:12,fontSize:12,color:C.primary,textDecoration:"underline"}}>View in Monday.com →</a>}</div><button onClick={()=>{reset();setScreen("form");}} style={bs}>Submit Another Request</button></div></div>);
-      return(<div style={{minHeight:"100vh",background:C.light,padding:"24px 16px"}}><div style={{maxWidth:740,margin:"0 auto"}}><div style={{background:C.primary,borderRadius:12,padding:"18px 28px",marginBottom:20,display:"flex",alignItems:"center",gap:14}}><div style={{width:40,height:40,background:"rgba(255,255,255,0.15)",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="#fff" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/></svg></div><div><div style={{color:"#fff",fontSize:18,fontWeight:700}}>Breaker Slot Request Form</div><div style={{color:"rgba(255,255,255,0.65)",fontSize:12,marginTop:2}}>Burns &amp; McDonnell · PO 280865 · Wesco/GE/Hitachi HV Breaker Program</div></div></div><div style={crd}><div style={sh}>① Project Details</div><div style={g2}><div><label style={lbl}>Project Name <span style={{color:C.danger}}>*</span></label><input value={form.projectName} onChange={e=>setForm(f=>({...f,projectName:e.target.value}))} style={inp} placeholder="e.g. Riverside Substation Expansion"/></div><div><label style={lbl}>Client Name <span style={{color:C.danger}}>*</span></label><input value={form.clientName} onChange={e=>setForm(f=>({...f,clientName:e.target.value}))} style={inp} placeholder="e.g. Pacific Gas &amp; Electric"/></div></div><div style={g2}><div><label style={lbl}>Requester <span style={{color:C.danger}}>*</span></label><select value={form.requesterId} onChange={e=>setForm(f=>({...f,requesterId:e.target.value}))} style={inp}><option value="">Select your name…</option>{users.map(u=><option key={u.id} value={u.id}>{u.name}{u.email?` (${u.email})`:""}</option>)}</select></div><div><label style={lbl}>Opportunity Number <span style={{color:C.danger}}>*</span></label><input value={form.opportunityNumber} onChange={e=>setForm(f=>({...f,opportunityNumber:e.target.value}))} style={inp} placeholder="e.g. OPP-2026-0042"/></div></div><div style={g2}><div><label style={lbl}>BMcD Estimated Project Value (USD) <span style={{color:C.danger}}>*</span></label><input type="number" min="0" value={form.estimatedValue} onChange={e=>setForm(f=>({...f,estimatedValue:e.target.value}))} style={inp} placeholder="e.g. 5000000"/></div><div><label style={lbl}>Drop-Dead Customer PO Release Date <span style={{color:C.danger}}>*</span></label><input type="date" value={form.dropDeadDate} onChange={e=>setForm(f=>({...f,dropDeadDate:e.target.value}))} style={inp}/></div></div><div><label style={lbl}>Do the Breakers Enable the Project? <span style={{color:C.danger}}>*</span></label><select value={form.breakersEnable} onChange={e=>setForm(f=>({...f,breakersEnable:e.target.value}))} style={{...inp,maxWidth:420}}><option value="">Select…</option><option value="Yes">Yes — project cannot proceed without these breakers</option><option value="No">No — net new purchases could support the schedule</option></select></div></div><div style={crd}><div style={sh}>② Breaker Selection</div><p style={{color:"#475569",fontSize:13,lineHeight:1.6,marginBottom:18}}>Select a delivery slot first, then hand-pick the exact breaker units you need. Only <strong>Available</strong> units can be selected.</p><label style={lbl}>Delivery Slot / PO Line <span style={{color:C.danger}}>*</span></label><select value={selectedPoLineId} onChange={e=>setSelectedPoLineId(e.target.value)} style={{...inp,fontFamily:"monospace",fontSize:13}}><option value="">Choose a PO line…</option>{VOLTAGE_GROUPS.map(({label,key})=>{const gl=poLines.filter(l=>String(l.voltage).trim()===key);if(!gl.length)return null;return(<optgroup key={key} label={label}>{gl.map(l=>(<option key={l.id} value={l.id}>{`Line ${String(l.poLineNum).padStart(2,"0")} — ${l.voltage}kV ${l.manufacturer} — Delivery ${l.deliveryDate} — ${l.availableQty} avail`}</option>))}</optgroup>);})}{poLines.filter(l=>!["145","245","362"].includes(String(l.voltage).trim())).map(l=>(<option key={l.id} value={l.id}>{`Line ${String(l.poLineNum).padStart(2,"0")} — ${l.voltage}kV ${l.manufacturer} — Delivery ${l.deliveryDate} — ${l.availableQty} avail`}</option>))}</select>{selectedPoLineId&&(<div style={{marginTop:22}}>{subLoad?(<div style={{textAlign:"center",padding:28,color:"#64748b"}}>Loading breaker units…</div>):(<>{(()=>{let bg,bc,color,msg;if(available.length===0){bg="#fef2f2";bc="#fecaca";color=C.danger;msg="⚠️ No available breakers on this line.";}else if(selectedIds.length===0){bg="#fff7ed";bc="#fed7aa";color=C.warn;msg=`${available.length} breaker${available.length!==1?"s":""} available — select units below.`;}else{bg="#f0fdf4";bc="#86efac";color=C.green;msg=`✓ ${selectedIds.length} of ${available.length} selected.`;}return<div style={{background:bg,border:`1px solid ${bc}`,borderRadius:8,padding:"10px 14px",marginBottom:14,fontSize:13,color,fontWeight:500}}>{msg}</div>;})()}{available.length>0&&(<div style={{border:"1px solid #e2e8f0",borderRadius:8,overflow:"hidden"}}><div style={{background:"#f8fafc",padding:"8px 14px",fontSize:11,fontWeight:700,color:"#475569",letterSpacing:"0.06em",borderBottom:"1px solid #e2e8f0",display:"flex",alignItems:"center",justifyContent:"space-between"}}><span>AVAILABLE UNITS</span><span style={{fontWeight:400,color:"#94a3b8"}}>{selectedIds.length}/{available.length} selected</span></div>{available.length>1&&(<div style={{padding:"8px 14px",borderBottom:"1px solid #e2e8f0",display:"flex",gap:12}}><button onClick={()=>setSelectedIds(available.map(s=>s.id))} style={{fontSize:12,color:C.primary,background:"none",border:"none",cursor:"pointer",padding:0,fontWeight:500}}>Select all {available.length}</button><span style={{color:"#e2e8f0"}}>|</span><button onClick={()=>setSelectedIds([])} style={{fontSize:12,color:"#64748b",background:"none",border:"none",cursor:"pointer",padding:0}}>Clear all</button></div>)}{available.map((b,i)=>{const checked=selectedIds.includes(b.id);return(<label key={b.id} style={{display:"flex",alignItems:"center",gap:12,padding:"13px 14px",borderBottom:i<available.length-1?"1px solid #e2e8f0":"none",cursor:"pointer",background:checked?"#f0fdf4":"#fff"}}><input type="checkbox" checked={checked} onChange={()=>toggle(b.id)} style={{width:18,height:18,accentColor:C.green,cursor:"pointer",flexShrink:0}}/><div style={{flex:1}}><div style={{fontWeight:600,color:"#1e293b",fontSize:14}}>{b.name}</div><div style={{fontSize:12,color:"#64748b",marginTop:1}}>{[b.voltage&&`${b.voltage}kV`,b.manufacturer,b.deliveryDate&&`Delivery: ${b.deliveryDate}`].filter(Boolean).join(" · ")}</div></div><div style={bdg(C.green,"#dcfce7")}>Available</div></label>);})}</div>)}{unavailable.length>0&&(<details style={{marginTop:10}}><summary style={{fontSize:12,color:"#94a3b8",cursor:"pointer",padding:"4px 0"}}>{unavailable.length} unavailable unit{unavailable.length!==1?"s":""} (transparency)</summary><div style={{border:"1px solid #e2e8f0",borderRadius:8,marginTop:6,overflow:"hidden",opacity:0.55}}>{unavailable.map((b,i)=>(<div key={b.id} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 14px",borderBottom:i<unavailable.length-1?"1px solid #e2e8f0":"none"}}><div style={{width:18,flexShrink:0}}/><div style={{flex:1}}><div style={{fontWeight:500,color:"#94a3b8",fontSize:13}}>{b.name}</div><div style={{fontSize:11,color:"#94a3b8"}}>{[b.voltage&&`${b.voltage}kV`,b.manufacturer].filter(Boolean).join(" · ")}</div></div><div style={bdg("#64748b","#f1f5f9")}>{b.status||"Unavailable"}</div></div>))}</div></details>)}</>)}</div>)}</div><div style={crd}>{submitErr&&<div style={eb}>{submitErr}</div>}<button onClick={handleSubmit} disabled={!isValid||submitting} style={bp(!isValid||submitting)}>{submitting?"Creating request in Monday.com…":isValid?`Submit Request — ${selectedIds.length} Breaker${selectedIds.length!==1?"s":""} Selected`:"Submit Request"}</button>{!isValid&&<div style={{textAlign:"center",fontSize:12,color:"#94a3b8",marginTop:8}}>Complete all required fields and select at least one breaker unit.</div>}<div style={{marginTop:16,padding:"12px 14px",background:"#f8fafc",borderRadius:8,fontSize:12,color:"#64748b",lineHeight:1.6}}><strong style={{color:"#475569"}}>What happens next:</strong> Your request is created in Monday.com and routed to the BSF Review Committee. Once approved, all selected breaker units are automatically marked Reserved.</div></div></div></div>);
+
+    const MONDAY_API        = "https://api.monday.com/v2";
+    const SLOT_BOARD_ID     = 18422871700;
+    const REQUESTS_BOARD_ID = 18422875681;
+    const SUBITEMS_BOARD_ID = 18426331487;
+
+    const P = {
+      voltage:"dropdown_mm5ese7e", manufacturer:"dropdown_mm5ef8kt",
+      deliveryDate:"date4", poLineNum:"numeric_mm5sv1e1", status:"status",
+    };
+    const S = {
+      status:"status", voltage:"dropdown_mm65b542",
+      manufacturer:"dropdown_mm65c7mt", deliveryDate:"date_mm65h7tw",
+    };
+
+    async function gql(apiKey, query, variables = {}) {
+      const res = await fetch(MONDAY_API, {
+        method:"POST",
+        headers:{"Content-Type":"application/json", Authorization:apiKey},
+        body:JSON.stringify({query, variables}),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      if (json.errors) throw new Error(json.errors[0].message);
+      return json.data;
     }
-    const root=ReactDOM.createRoot(document.getElementById("root"));root.render(<App/>);
+
+    function colMap(cvs) { const m={}; cvs.forEach(c=>{m[c.id]=c.text;}); return m; }
+
+    /* BMcD logo mark SVG */
+    const LogoMark = () => (
+      <svg width="34" height="34" viewBox="0 0 34 34" fill="none">
+        <path d="M7 27 L17 5" stroke="white" strokeWidth="5.5" strokeLinecap="round"/>
+        <path d="M15 27 L25 5" stroke="white" strokeWidth="5.5" strokeLinecap="round"/>
+        <path d="M3 17 L31 17" stroke="#E6F001" strokeWidth="3.5" strokeLinecap="round" opacity="0.9"/>
+      </svg>
+    );
+
+    function App() {
+      const [apiKey,    setApiKey]    = useState("");
+      const [setupLoad, setSetupLoad] = useState(false);
+      const [setupErr,  setSetupErr]  = useState("");
+      const [screen,    setScreen]    = useState("setup");
+
+      const [poLines, setPoLines] = useState([]);
+      const [users,   setUsers]   = useState([]);
+
+      const [selectedPoLineId, setSelectedPoLineId] = useState("");
+      const [subitems,         setSubitems]          = useState([]);
+      const [subLoad,          setSubLoad]           = useState(false);
+      const [selectedIds,      setSelectedIds]       = useState([]);
+
+      const [form, setForm] = useState({
+        projectName:"", clientName:"", requesterId:"",
+        opportunityNumber:"", estimatedValue:"", breakersEnable:"", dropDeadDate:"",
+      });
+      const [submitting,  setSubmitting]  = useState(false);
+      const [submitErr,   setSubmitErr]   = useState("");
+      const [createdItem, setCreatedItem] = useState(null);
+
+      /* ── Connect ── */
+      const handleSetup = async () => {
+        if (!apiKey.trim()) { setSetupErr("API key is required."); return; }
+        setSetupErr(""); setSetupLoad(true);
+        try {
+          const [bd, ud] = await Promise.all([
+            gql(apiKey, `{ boards(ids:[${SLOT_BOARD_ID}]) { items_page(limit:50) { items { id name group{title} column_values(ids:["${P.voltage}","${P.manufacturer}","${P.deliveryDate}","${P.poLineNum}","${P.status}","numeric_mm5e51z3","numeric_mm5sw1t1"]) { id text } } } } }`),
+            gql(apiKey, `{ users(kind:all, limit:500) { id name email } }`),
+          ]);
+          const lines = bd.boards[0].items_page.items.map(item => {
+            const cols    = colMap(item.column_values);
+            const total   = parseFloat(cols["numeric_mm5e51z3"]||"0")||0;
+            const reserved= parseFloat(cols["numeric_mm5sw1t1"] ||"0")||0;
+            const avail   = Math.max(0, total - reserved);
+            return {
+              id:item.id, name:item.name,
+              voltage:cols[P.voltage]||"", manufacturer:cols[P.manufacturer]||"",
+              deliveryDate:cols[P.deliveryDate]||"", availableQty:avail,
+              poLineNum:parseFloat(cols[P.poLineNum]||"0"),
+            };
+          });
+          lines.sort((a,b)=>a.poLineNum-b.poLineNum);
+          setPoLines(lines); setUsers(ud.users||[]); setScreen("form");
+        } catch(e) { setSetupErr("Connection failed: "+e.message); }
+        finally { setSetupLoad(false); }
+      };
+
+      /* ── Load subitems ── */
+      useEffect(() => {
+        if (!selectedPoLineId||!apiKey) { setSubitems([]); setSelectedIds([]); return; }
+        setSubLoad(true); setSubitems([]); setSelectedIds([]);
+        gql(apiKey, `{ items(ids:[${selectedPoLineId}]) { subitems { id name column_values(ids:["${S.status}","${S.voltage}","${S.manufacturer}","${S.deliveryDate}"]) { id text } } } }`)
+          .then(d => {
+            const raw = d.items?.[0]?.subitems||[];
+            setSubitems(raw.map(si => {
+              const cols = colMap(si.column_values);
+              return { id:si.id, name:si.name, status:cols[S.status]||"", voltage:cols[S.voltage]||"", manufacturer:cols[S.manufacturer]||"", deliveryDate:cols[S.deliveryDate]||"" };
+            }));
+          })
+          .catch(e=>console.error(e))
+          .finally(()=>setSubLoad(false));
+      }, [selectedPoLineId]);
+
+      const available   = subitems.filter(s=>s.status==="Available");
+      const unavailable = subitems.filter(s=>s.status!=="Available");
+      const selectedLine = poLines.find(l=>l.id===selectedPoLineId);
+      const selectedUser = users.find(u=>u.id===form.requesterId);
+      const toggle = id => setSelectedIds(p=>p.includes(id)?p.filter(x=>x!==id):[...p,id]);
+
+      const isValid = form.projectName.trim()&&form.clientName.trim()&&form.requesterId&&
+        form.opportunityNumber.trim()&&form.estimatedValue&&form.breakersEnable&&
+        form.dropDeadDate&&selectedPoLineId&&selectedIds.length>0;
+
+      /* ── Submit ── */
+      const handleSubmit = async () => {
+        if (!isValid) { setSubmitErr("Please complete all required fields and select at least one breaker unit."); return; }
+        setSubmitErr(""); setSubmitting(true);
+        try {
+          const cv = {
+            "text_mm5es7sz":        form.projectName,
+            "short_texthrb2ladn":   form.clientName,
+            "short_textfukcenx9":   form.opportunityNumber,
+            "number8jhwmqe9":       parseFloat(form.estimatedValue)||0,
+            "numeric_mm5es9c9":     selectedIds.length,
+            "text_mm66tjan":        selectedIds.join("|"),
+            "peopleda149l5r":       { personsAndTeams:[{ id:parseInt(form.requesterId), kind:"person" }] },
+            "single_selectjej2zay": { label:form.breakersEnable },
+            "date3z59ugdu":         { date:form.dropDeadDate },
+            "status":               { label:"Working on it" },
+            "board_relation_mm5e11py": { item_ids:[parseInt(selectedPoLineId)] },
+            "board_relation_mm65ppt4": { item_ids:selectedIds.map(Number) },
+          };
+          const result = await gql(apiKey,
+            `mutation CreateRequest($boardId:ID!,$name:String!,$cv:JSON!,$groupId:String!) { create_item(board_id:$boardId,item_name:$name,column_values:$cv,group_id:$groupId) { id url } }`,
+            { boardId:String(REQUESTS_BOARD_ID), name:form.opportunityNumber, cv:JSON.stringify(cv), groupId:"topics" }
+          );
+          setCreatedItem(result.create_item);
+          setScreen("success");
+        } catch(e) { setSubmitErr("Submission failed: "+e.message); }
+        finally { setSubmitting(false); }
+      };
+
+      const reset = () => {
+        setForm({ projectName:"", clientName:"", requesterId:"", opportunityNumber:"", estimatedValue:"", breakersEnable:"", dropDeadDate:"" });
+        setSelectedPoLineId(""); setSelectedIds([]); setSubitems([]); setSubmitErr(""); setCreatedItem(null);
+      };
+
+      const voltBadgeClass = v => v==="145"?"vbadge v145":v==="245"?"vbadge v245":"vbadge v362";
+
+      /* ── SETUP ── */
+      if (screen==="setup") return (
+        <div className="setup-wrap">
+          <div className="setup-box">
+            <div className="setup-logo-row">
+              <div style={{ background:"#002D59", borderRadius:10, width:40, height:40, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                <LogoMark/>
+              </div>
+              <div>
+                <div style={{ fontSize:16, fontWeight:800, color:"#002D59", letterSpacing:".04em" }}>BURNS &amp; McDONNELL</div>
+                <div style={{ fontSize:11, color:"#94A3B8", marginTop:2 }}>HV Circuit Breaker Slot Program</div>
+              </div>
+            </div>
+            <div className="setup-divider"/>
+            <p style={{ color:"#4D6680", fontSize:13, marginBottom:22, lineHeight:1.6 }}>
+              Enter your Monday.com API key to connect. Your key is held only in memory for this session and is never stored.
+            </p>
+            <label className="bmcd-lbl">Monday.com API Key <span className="bmcd-req">*</span></label>
+            <input type="password" value={apiKey} onChange={e=>setApiKey(e.target.value)}
+              onKeyDown={e=>e.key==="Enter"&&handleSetup()}
+              placeholder="eyJhbGciOiJIUzI1Ni..." className="setup-inp" style={{ marginBottom:0 }}/>
+            <div className="setup-hint">Profile → Developers → My Access Tokens</div>
+            {setupErr && <div className="err-box">{setupErr}</div>}
+            <button onClick={handleSetup} disabled={setupLoad} className="setup-btn">
+              {setupLoad ? "Connecting…" : "Connect & Open Form →"}
+            </button>
+          </div>
+        </div>
+      );
+
+      /* ── SUCCESS ── */
+      if (screen==="success") return (
+        <div className="setup-wrap">
+          <div className="setup-box" style={{ maxWidth:520, textAlign:"center" }}>
+            <div style={{ width:60, height:60, background:"#E6F001", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 18px" }}>
+              <svg width="28" height="28" fill="none" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" stroke="#002D59" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </div>
+            <div style={{ fontSize:22, fontWeight:800, color:"#002D59", marginBottom:8 }}>Request Submitted!</div>
+            <div style={{ color:"#4D6680", fontSize:13, lineHeight:1.6, marginBottom:22 }}>
+              Your request for <strong style={{ color:"#002D59" }}>{form.opportunityNumber}</strong> has been created in Monday.com and sent to the BSF Review Committee. Please check your email for submission details and next steps.
+            </div>
+            <div style={{ background:"#EEF3FC", borderRadius:10, padding:16, marginBottom:22, textAlign:"left" }}>
+              <div style={{ fontSize:9, fontWeight:700, color:"#0049CD", marginBottom:10, letterSpacing:".1em" }}>SUBMISSION SUMMARY</div>
+              {[
+                ["Project",          form.projectName],
+                ["Client",           form.clientName],
+                ["Opportunity #",    form.opportunityNumber],
+                ["PO Line",          selectedLine?.name||"—"],
+                ["Breakers Selected",`${selectedIds.length} unit${selectedIds.length!==1?"s":""}`],
+                ["Requester",        selectedUser?.name||"—"],
+              ].map(([k,v])=>(
+                <div key={k} style={{ display:"flex", justifyContent:"space-between", fontSize:12, color:"#334155", marginBottom:5, gap:12 }}>
+                  <span style={{ color:"#94A3B8" }}>{k}</span>
+                  <span style={{ fontWeight:600 }}>{v}</span>
+                </div>
+              ))}
+              {createdItem?.url && (
+                <a href={createdItem.url} target="_blank" rel="noreferrer"
+                  style={{ display:"block", marginTop:12, fontSize:11, color:"#0049CD", textDecoration:"underline" }}>
+                  View in Monday.com →
+                </a>
+              )}
+            </div>
+            <button onClick={()=>{reset();setScreen("form");}}
+              style={{ background:"#F0F4F8", color:"#334155", border:"1.5px solid #D4DCE6", borderRadius:8, padding:"11px 24px", fontSize:13, fontWeight:600, cursor:"pointer", width:"100%" }}>
+              Submit Another Request
+            </button>
+          </div>
+        </div>
+      );
+
+      /* ── MAIN FORM ── */
+      const VOLT_GROUPS = [
+        { label:"145 kV — GE", key:"145" },
+        { label:"245 kV — GE / Hitachi", key:"245" },
+        { label:"362 kV — Hitachi", key:"362" },
+      ];
+
+      const reservedPct = selectedLine
+        ? Math.round(((selectedLine.availableQty > 0 ? 0 : 1)) * 100)
+        : 0;
+
+      return (
+        <div>
+          {/* ── HEADER ── */}
+          <div className="bmcd-header">
+            <div className="bmcd-header-inner">
+              <div className="bmcd-logo-row">
+                <LogoMark/>
+                <div className="bmcd-logo-wordmark">
+                  <span className="brand">BURNS &amp; McDONNELL</span>
+                  <span className="est">ESTABLISHED 1898</span>
+                </div>
+              </div>
+              <div className="bmcd-eyebrow">HV Circuit Breaker Slot Program</div>
+              <div className="bmcd-hero-title">Reserve Your <span>Breaker Slots.</span><br/>Power Your Projects.</div>
+              <div className="bmcd-neon-bar"/>
+              <div className="bmcd-hero-sub">Submit a reservation request for high-voltage circuit breakers from the Burns &amp; McDonnell slot inventory. Wesco · GE · Hitachi — 145kV, 245kV, 362kV</div>
+            </div>
+          </div>
+
+          {/* ── STEP INDICATOR ── */}
+          <div className="bmcd-steps">
+            <div className={`bmcd-step ${!selectedPoLineId ? "active" : "inactive"}`}>
+              <div className="bmcd-step-num">1</div>
+              <div className="bmcd-step-lbl">Project Details</div>
+            </div>
+            <div className="bmcd-step-div"/>
+            <div className={`bmcd-step ${selectedPoLineId ? "active" : "inactive"}`}>
+              <div className="bmcd-step-num">2</div>
+              <div className="bmcd-step-lbl">Breaker Selection</div>
+            </div>
+          </div>
+
+          {/* ── FORM BODY ── */}
+          <div className="bmcd-main">
+
+            {/* Section A — Project Details */}
+            <div className="bmcd-card">
+              <div className="bmcd-card-hdr">
+                <div className="bmcd-card-icon">
+                  <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke="#0049CD" strokeWidth="1.8" strokeLinecap="round"/></svg>
+                </div>
+                <div>
+                  <div className="bmcd-card-title">Project Details</div>
+                  <div className="bmcd-card-sub">Tell us about your project and opportunity</div>
+                </div>
+                <span className="bmcd-step-tag">STEP 01</span>
+              </div>
+
+              <div className="g2">
+                <div>
+                  <label className="bmcd-lbl">Project Name<span className="bmcd-req">*</span></label>
+                  <input value={form.projectName} onChange={e=>setForm(f=>({...f,projectName:e.target.value}))}
+                    className="std-inp" placeholder="e.g. Riverside Substation Expansion"/>
+                </div>
+                <div>
+                  <label className="bmcd-lbl">Client Name<span className="bmcd-req">*</span></label>
+                  <input value={form.clientName} onChange={e=>setForm(f=>({...f,clientName:e.target.value}))}
+                    className="std-inp" placeholder="e.g. American Electric Power"/>
+                </div>
+              </div>
+
+              <div className="g2">
+                <div>
+                  <label className="bmcd-lbl">Requester<span className="bmcd-req">*</span></label>
+                  <select value={form.requesterId} onChange={e=>setForm(f=>({...f,requesterId:e.target.value}))} className="std-inp">
+                    <option value="">Select your name…</option>
+                    {users.map(u=><option key={u.id} value={u.id}>{u.name}{u.email?` (${u.email})`:""}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="bmcd-lbl">Opportunity Number<span className="bmcd-req">*</span></label>
+                  <input value={form.opportunityNumber} onChange={e=>setForm(f=>({...f,opportunityNumber:e.target.value}))}
+                    className="std-inp" placeholder="e.g. OPP073319"/>
+                </div>
+              </div>
+
+              <div className="g2" style={{ marginBottom:14 }}>
+                <div>
+                  <label className="bmcd-lbl">BMcD Estimated Project Value (USD)<span className="bmcd-req">*</span></label>
+                  <input type="number" min="0" value={form.estimatedValue}
+                    onChange={e=>setForm(f=>({...f,estimatedValue:e.target.value}))}
+                    className="std-inp" placeholder="e.g. 5000000"/>
+                </div>
+                <div>
+                  <label className="bmcd-lbl">Drop-Dead Customer PO Release Date<span className="bmcd-req">*</span></label>
+                  <input type="date" value={form.dropDeadDate}
+                    onChange={e=>setForm(f=>({...f,dropDeadDate:e.target.value}))} className="std-inp"/>
+                </div>
+              </div>
+
+              <div className="g1">
+                <div>
+                  <label className="bmcd-lbl">Do the Breakers Enable the Project?<span className="bmcd-req">*</span></label>
+                  <select value={form.breakersEnable} onChange={e=>setForm(f=>({...f,breakersEnable:e.target.value}))} className="std-inp">
+                    <option value="">Select…</option>
+                    <option value="Yes">Yes — project cannot proceed without these breakers</option>
+                    <option value="No">No — net new purchases could support the schedule</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Section B — Breaker Selection */}
+            <div className="bmcd-card">
+              <div className="bmcd-card-hdr">
+                <div className="bmcd-card-icon">
+                  <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" stroke="#0049CD" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </div>
+                <div>
+                  <div className="bmcd-card-title">Breaker Selection</div>
+                  <div className="bmcd-card-sub">Choose your delivery slot, then select specific units</div>
+                </div>
+                <span className="bmcd-step-tag">STEP 02</span>
+              </div>
+
+              <p style={{ color:"#4D6680", fontSize:12, lineHeight:1.6, marginBottom:14 }}>
+                Select a delivery slot, then hand-pick the exact breaker units you need.
+                Only <strong>Available</strong> units can be selected.
+              </p>
+
+              {/* PO Line dropdown */}
+              <label className="bmcd-lbl" style={{ marginBottom:6 }}>Delivery Slot / PO Line<span className="bmcd-req">*</span></label>
+              <select
+                value={selectedPoLineId}
+                onChange={e=>setSelectedPoLineId(e.target.value)}
+                className="std-inp"
+                style={{ fontFamily:"monospace", fontSize:12, marginBottom:4 }}>
+                <option value="">Choose a delivery slot…</option>
+                {VOLT_GROUPS.map(({label, key})=>{
+                  const lines = poLines.filter(l=>String(l.voltage).trim()===key);
+                  if (!lines.length) return null;
+                  return (
+                    <optgroup key={key} label={label}>
+                      {lines.map(l=>(
+                        <option key={l.id} value={l.id}>
+                          {`Line ${String(l.poLineNum).padStart(2,"0")} — ${l.voltage}kV ${l.manufacturer} — Delivery ${l.deliveryDate} — ${l.availableQty} avail${l.availableQty<=0?" (FULL)":""}`}
+                        </option>
+                      ))}
+                    </optgroup>
+                  );
+                })}
+                {poLines.filter(l=>!["145","245","362"].includes(String(l.voltage).trim())).map(l=>(
+                  <option key={l.id} value={l.id}>
+                    {`Line ${String(l.poLineNum).padStart(2,"0")} — ${l.voltage}kV ${l.manufacturer} — Delivery ${l.deliveryDate} — ${l.availableQty} avail`}
+                  </option>
+                ))}
+              </select>
+
+              {/* Breaker picker */}
+              {selectedPoLineId && (
+                <div style={{ marginTop:18 }}>
+                  {subLoad ? (
+                    <div style={{ textAlign:"center", padding:24, color:"#94A3B8", fontSize:13 }}>Loading breaker units…</div>
+                  ) : (
+                    <>
+                      {/* Capacity bar */}
+                      {selectedLine && (
+                        <div className="cap-wrap">
+                          <div className="cap-row">
+                            <span>{selectedLine.name}</span>
+                            <span className="cap-green">{selectedLine.availableQty} of {selectedLine.availableQty + (subitems.length - available.length)} units available</span>
+                          </div>
+                          <div className="cap-track">
+                            <div className="cap-fill" style={{ width:`${available.length>0?Math.round((available.length/(available.length+unavailable.length||1))*100):0}%` }}/>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Status banner */}
+                      {(()=>{
+                        let bg,bc,color,msg;
+                        if (available.length===0){bg="#FEF2F2";bc="#FECACA";color="#DC2626";msg="No available breakers on this line — choose a different slot or contact procurement.";}
+                        else if (selectedIds.length===0){bg="#FFFBEB";bc="#FDE68A";color="#D97706";msg=`${available.length} breaker${available.length!==1?"s":""} available — select the units you need below.`;}
+                        else{bg="#E6F9EE";bc="#6DD19A";color="#1A9B5A";msg=`${selectedIds.length} of ${available.length} available breaker${available.length!==1?"s":""} selected.`;}
+                        return <div style={{ background:bg, border:`1px solid ${bc}`, borderRadius:8, padding:"9px 14px", marginBottom:12, fontSize:12, color, fontWeight:500 }}>{msg}</div>;
+                      })()}
+
+                      {available.length > 0 && (
+                        <>
+                          {/* Counter */}
+                          <div className="counter">
+                            <div>
+                              <div className="c-lbl">Units Selected</div>
+                              <div className="c-num">{selectedIds.length}<span className="c-of">of {available.length}</span></div>
+                            </div>
+                            <div>
+                              {available.length > 1 && (
+                                <div style={{ display:"flex", gap:12, justifyContent:"flex-end", marginBottom:4 }}>
+                                  <button onClick={()=>setSelectedIds(available.map(s=>s.id))}
+                                    style={{ fontSize:11, color:"#E6F001", background:"none", border:"none", cursor:"pointer", padding:0, fontWeight:600 }}>
+                                    Select all {available.length}
+                                  </button>
+                                  <span style={{ color:"rgba(255,255,255,.3)" }}>|</span>
+                                  <button onClick={()=>setSelectedIds([])}
+                                    style={{ fontSize:11, color:"rgba(255,255,255,.55)", background:"none", border:"none", cursor:"pointer", padding:0 }}>
+                                    Clear
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Breaker checkboxes */}
+                          <div style={{ marginBottom:6 }}>
+                            <div style={{ background:"#F0F4F8", padding:"7px 14px", fontSize:9, fontWeight:700, color:"#4D6680", letterSpacing:".1em", borderRadius:"7px 7px 0 0", borderBottom:"1px solid #D4DCE6" }}>
+                              AVAILABLE UNITS — SELECT ALL YOU NEED
+                            </div>
+                            {available.map((b,i)=>{
+                              const chk = selectedIds.includes(b.id);
+                              return (
+                                <label key={b.id} className={`bi ${chk?"chk":"unchk"}`}
+                                  style={{ borderRadius:i===available.length-1?"0 0 7px 7px":"0", borderTop:i===0?"none":"1px solid #E8EDF4" }}>
+                                  <div className={`cbox ${chk?"on":"off"}`}>
+                                    {chk && <span style={{ color:"#fff", fontSize:11, fontWeight:700 }}>✓</span>}
+                                  </div>
+                                  <input type="checkbox" checked={chk} onChange={()=>toggle(b.id)} style={{ display:"none" }}/>
+                                  <div style={{ flex:1 }}>
+                                    <div style={{ fontWeight:600, color:"#002D59", fontSize:13 }}>{b.name}</div>
+                                    <div style={{ fontSize:11, color:"#94A3B8", marginTop:1 }}>
+                                      {[b.voltage&&`${b.voltage}kV`, b.manufacturer, b.deliveryDate&&`Delivery: ${b.deliveryDate}`].filter(Boolean).join(" · ")}
+                                    </div>
+                                  </div>
+                                  <span style={{ fontSize:10, fontWeight:700, color:"#1A9B5A", background:"#E6F9EE", padding:"2px 8px", borderRadius:20, flexShrink:0 }}>Available</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </>
+                      )}
+
+                      {/* Unavailable (collapsible) */}
+                      {unavailable.length > 0 && (
+                        <details style={{ marginTop:8 }}>
+                          <summary style={{ fontSize:11, color:"#94A3B8", cursor:"pointer", padding:"3px 0" }}>
+                            {unavailable.length} unavailable unit{unavailable.length!==1?"s":""} on this line (shown for transparency)
+                          </summary>
+                          <div style={{ border:"1px solid #D4DCE6", borderRadius:8, marginTop:6, overflow:"hidden", opacity:.5 }}>
+                            {unavailable.map((b,i)=>(
+                              <div key={b.id} style={{ display:"flex", alignItems:"center", gap:11, padding:"10px 14px", borderBottom:i<unavailable.length-1?"1px solid #E8EDF4":"none" }}>
+                                <div style={{ width:18, flexShrink:0 }}/>
+                                <div style={{ flex:1 }}>
+                                  <div style={{ fontWeight:500, color:"#94A3B8", fontSize:12 }}>{b.name}</div>
+                                  <div style={{ fontSize:11, color:"#B4C4D4" }}>{[b.voltage&&`${b.voltage}kV`,b.manufacturer].filter(Boolean).join(" · ")}</div>
+                                </div>
+                                <span style={{ fontSize:10, fontWeight:700, color:"#94A3B8", background:"#F1F5F9", padding:"2px 8px", borderRadius:20 }}>{b.status||"Unavailable"}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </details>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Submit zone */}
+            <div className="submit-zone">
+              {submitErr && <div className="err-box" style={{ marginBottom:14 }}>{submitErr}</div>}
+              <div className="submit-inner">
+                <div className="submit-text">
+                  <strong>Ready to submit.</strong> Your request for {selectedIds.length || "your"} breaker unit{selectedIds.length!==1?"s":""}{selectedLine?` on ${selectedLine.name}`:""} will be routed to the BSF Review Committee for review. Please check your email for submission details and next steps.
+                </div>
+                <button
+                  onClick={handleSubmit}
+                  disabled={!isValid||submitting}
+                  className={isValid&&!submitting?"submit-btn-active":"submit-btn-dis"}>
+                  {submitting ? "Submitting…" : isValid ? `Submit Request — ${selectedIds.length} Unit${selectedIds.length!==1?"s":""}` : "Submit Request"}
+                </button>
+              </div>
+              {!isValid && (
+                <div style={{ textAlign:"center", fontSize:11, color:"rgba(255,255,255,.4)", marginTop:12 }}>
+                  Complete all required fields and select at least one breaker unit to enable submission.
+                </div>
+              )}
+            </div>
+
+            <div className="bmcd-footer">
+              BURNS &amp; McDONNELL &nbsp;·&nbsp; BREAKER SLOT PROGRAM &nbsp;·&nbsp; CONFIDENTIAL — INTERNAL USE ONLY
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App/>);
   </script>
 </body>
 </html>
