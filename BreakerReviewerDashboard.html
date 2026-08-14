@@ -374,6 +374,37 @@
         }
       };
 
+      /* ── Mark as Reserved (customer PO received) ── */
+      const [markReservedState, setMarkReservedState] = useState({});
+
+      const handleMarkReserved = async (req) => {
+        setMarkReservedState(p=>({...p,[req.id]:{working:true,error:null,done:false}}));
+        const errs = [];
+        try {
+          for (const breakerId of req.breakerIds) {
+            const bid = parseInt(breakerId);
+            if (!bid) continue;
+            try {
+              await gql(apiKey, `mutation($itemId:ID!,$boardId:ID!,$cv:JSON!){ change_multiple_column_values(item_id:$itemId,board_id:$boardId,column_values:$cv){ id } }`,
+                { itemId:String(bid), boardId:String(SUBITEMS_BOARD_ID), cv:JSON.stringify({ status:{ label:"Reserved" } }) });
+            } catch(e) { errs.push("Unit "+breakerId+": "+e.message); }
+          }
+          if (req.slotId) {
+            try {
+              const siData = await gql(apiKey, "{items(ids:["+req.slotId+"]){subitems{id column_values(ids:[\"status\"]){id text}}}}");
+              const allSubs = siData.items?.[0]?.subitems||[];
+              const reservedCount = allSubs.filter(si=>si.column_values?.find(c=>c.id==="status")?.text==="Reserved").length;
+              await gql(apiKey, "mutation($itemId:ID!,$boardId:ID!,$cv:JSON!){ change_multiple_column_values(item_id:$itemId,board_id:$boardId,column_values:$cv){ id } }",
+                { itemId:String(req.slotId), boardId:String(SLOT_BOARD_ID), cv:JSON.stringify({ numeric_mm5sw1t1:reservedCount }) });
+            } catch(e) { errs.push("Reserved Qty: "+e.message); }
+          }
+          setMarkReservedState(p=>({...p,[req.id]:{ working:false, error:errs.length?errs.join("; "):null, done:true }}));
+          setTimeout(()=>loadRequests(), 1800);
+        } catch(e) {
+          setMarkReservedState(p=>({...p,[req.id]:{ working:false, error:"Failed: "+e.message, done:false }}));
+        }
+      };
+
       /* ── SETUP SCREEN ── */
       if (screen==="setup") return (
         <div className="setup-wrap">
