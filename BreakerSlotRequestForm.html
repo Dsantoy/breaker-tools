@@ -99,33 +99,7 @@
     const REQUESTS_BOARD_ID = 18422875681;
     const SUBITEMS_BOARD_ID = 18426331487;
 
-    // OAuth
-    const OAUTH_CLIENT_ID     = "ca153a50c713be8d916e01777afeacf8";
-    const OAUTH_CLIENT_SECRET = "352a3aa5474e188bb51d6615622d0611";
-    const TOKEN_KEY           = "bsf_monday_token_v1";
-    const getRedirectUri = () => window.location.origin + window.location.pathname;
-    const loadToken  = () => { try { return localStorage.getItem(TOKEN_KEY)||""; } catch { return ""; } };
-    const saveToken  = t => { try { localStorage.setItem(TOKEN_KEY, t); } catch {} };
-    const clearToken = () => { try { localStorage.removeItem(TOKEN_KEY); } catch {} };
-    async function exchangeCode(code) {
-      const res = await fetch("https://auth.monday.com/oauth2/token", {
-        method:"POST", headers:{"Content-Type":"application/x-www-form-urlencoded"},
-        body:new URLSearchParams({ client_id:OAUTH_CLIENT_ID, client_secret:OAUTH_CLIENT_SECRET, code, redirect_uri:getRedirectUri() }).toString(),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = await res.json();
-      if (!json.access_token) throw new Error(json.error_description||"No token returned");
-      return json.access_token;
-    }
-    function startOAuth() {
-      const state = Math.random().toString(36).slice(2)+Date.now().toString(36);
-      sessionStorage.setItem("monday_oauth_state", state);
-      const url = new URL("https://auth.monday.com/oauth2/authorize");
-      url.searchParams.set("client_id", OAUTH_CLIENT_ID);
-      url.searchParams.set("redirect_uri", getRedirectUri());
-      url.searchParams.set("state", state);
-      window.location.href = url.toString();
-    }
+    const API_KEY = "eyJhbGci•••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••";
 
     // Statuses that cannot be selected (fully locked)
     const LOCKED_STATUSES = ["Reserved", "Delivered"];
@@ -138,7 +112,7 @@
         headers:{"Content-Type":"application/json", Authorization:apiKey},
         body:JSON.stringify({query, variables}),
       });
-      if (res.status === 401) { clearToken(); throw new Error("AUTH_EXPIRED"); }
+      if (res.status === 401) throw new Error("AUTH_EXPIRED");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       if (json.errors) throw new Error(json.errors[0].message);
@@ -179,10 +153,8 @@
     );
 
     function App() {
-      const [apiKey,    setApiKey]    = useState("");
-      const [authReady, setAuthReady] = useState(false);
-      const [authError, setAuthError] = useState("");
-      const [screen,    setScreen]    = useState("auth");
+      const [apiKey,    setApiKey]    = useState(API_KEY);
+      const [screen,    setScreen]    = useState("loading");
 
       const [poLines,         setPoLines]         = useState([]);
       const [subitemsByLine,  setSubitemsByLine]   = useState({});
@@ -245,45 +217,9 @@
         setUsers(ud.users||[]);
       }, []);
 
-      /* ── OAuth init ── */
+      /* ── Auto-load on mount ── */
       useEffect(() => {
-        const params = new URLSearchParams(window.location.search);
-        const code  = params.get("code");
-        const state = params.get("state");
-        async function init() {
-          if (code) {
-            window.history.replaceState({}, "", window.location.pathname);
-            const saved = sessionStorage.getItem("monday_oauth_state");
-            sessionStorage.removeItem("monday_oauth_state");
-            if (saved && state !== saved) {
-              setAuthError("State mismatch — please try signing in again.");
-              setAuthReady(true); return;
-            }
-            try {
-              const token = await exchangeCode(code);
-              saveToken(token); setApiKey(token);
-              await loadAllData(token);
-              setScreen("form");
-            } catch(e) {
-              setAuthError(e.message === "AUTH_EXPIRED" ? "Session expired — please sign in again." : "Sign-in failed: "+e.message);
-            }
-            setAuthReady(true); return;
-          }
-          const stored = loadToken();
-          if (stored) {
-            try {
-              setApiKey(stored);
-              await loadAllData(stored);
-              setScreen("form");
-              setAuthReady(true); return;
-            } catch(e) {
-              clearToken();
-              if (e.message !== "AUTH_EXPIRED") setAuthError("Session expired — please sign in again.");
-            }
-          }
-          setAuthReady(true);
-        }
-        init();
+        loadAllData(API_KEY).finally(() => setScreen("form"));
       }, [loadAllData]);
 
       /* ── Derived state from selected line ── */
@@ -375,32 +311,10 @@
         { label:"362 kV — Hitachi", key:"362" },
       ];
 
-      /* ── AUTH ── */
-      if (screen==="auth") return (
+      /* ── LOADING ── */
+      if (screen==="loading") return (
         <div className="setup-wrap">
-          <div className="setup-box">
-            <div className="setup-logo-row">
-              <div style={{ background:"#002D59", borderRadius:10, width:42, height:42, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-                <LogoMark/>
-              </div>
-              <div>
-                <div style={{ fontSize:16, fontWeight:800, color:"#002D59", letterSpacing:".04em" }}>BURNS &amp; McDONNELL</div>
-                <div style={{ fontSize:11, color:"#94A3B8", marginTop:2 }}>HV Circuit Breaker Slot Program</div>
-              </div>
-            </div>
-            <div className="setup-divider"/>
-            {!authReady ? (
-              <div style={{ textAlign:"center", padding:"24px 0", color:"#94A3B8", fontSize:13 }}>Signing you in…</div>
-            ) : (
-              <>
-                {authError && <div className="err-box" style={{ marginBottom:18 }}>{authError}</div>}
-                <p style={{ color:"#4D6680", fontSize:13, marginBottom:22, lineHeight:1.6 }}>
-                  Sign in with your Monday.com account to access the Breaker Slot Request Form.
-                </p>
-                <button onClick={startOAuth} className="setup-btn">Sign in with Monday.com →</button>
-              </>
-            )}
-          </div>
+          <div style={{ textAlign:"center", color:"#94A3B8", fontSize:13 }}>Loading…</div>
         </div>
       );
 
@@ -708,11 +622,6 @@
 
             <div className="bmcd-footer">
               BURNS &amp; McDONNELL &nbsp;·&nbsp; BREAKER SLOT PROGRAM &nbsp;·&nbsp; CONFIDENTIAL — INTERNAL USE ONLY
-              &nbsp;&nbsp;·&nbsp;&nbsp;
-              <button onClick={()=>{clearToken();setApiKey("");setScreen("auth");setAuthReady(true);setAuthError("");}}
-                style={{ background:"none", border:"none", color:"#94A3B8", fontSize:10, cursor:"pointer", textDecoration:"underline", padding:0, letterSpacing:".07em" }}>
-                Sign Out
-              </button>
             </div>
           </div>
         </div>
