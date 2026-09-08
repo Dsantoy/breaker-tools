@@ -92,12 +92,40 @@
 <body>
   <div id="root"></div>
   <script type="text/babel">
-    const { useState, useEffect } = React;
+    const { useState, useEffect, useCallback } = React;
 
     const MONDAY_API        = "https://api.monday.com/v2";
     const SLOT_BOARD_ID     = 18422871700;
     const REQUESTS_BOARD_ID = 18422875681;
     const SUBITEMS_BOARD_ID = 18426331487;
+
+    // OAuth
+    const OAUTH_CLIENT_ID     = "ca153a50c713be8d916e01777afeacf8";
+    const OAUTH_CLIENT_SECRET = "352a3aa5474e188bb51d6615622d0611";
+    const TOKEN_KEY           = "bsf_monday_token_v1";
+    const getRedirectUri = () => window.location.origin + window.location.pathname;
+    const loadToken  = () => { try { return localStorage.getItem(TOKEN_KEY)||""; } catch { return ""; } };
+    const saveToken  = t => { try { localStorage.setItem(TOKEN_KEY, t); } catch {} };
+    const clearToken = () => { try { localStorage.removeItem(TOKEN_KEY); } catch {} };
+    async function exchangeCode(code) {
+      const res = await fetch("https://auth.monday.com/oauth2/token", {
+        method:"POST", headers:{"Content-Type":"application/x-www-form-urlencoded"},
+        body:new URLSearchParams({ client_id:OAUTH_CLIENT_ID, client_secret:OAUTH_CLIENT_SECRET, code, redirect_uri:getRedirectUri() }).toString(),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      if (!json.access_token) throw new Error(json.error_description||"No token returned");
+      return json.access_token;
+    }
+    function startOAuth() {
+      const state = Math.random().toString(36).slice(2)+Date.now().toString(36);
+      sessionStorage.setItem("monday_oauth_state", state);
+      const url = new URL("https://auth.monday.com/oauth2/authorize");
+      url.searchParams.set("client_id", OAUTH_CLIENT_ID);
+      url.searchParams.set("redirect_uri", getRedirectUri());
+      url.searchParams.set("state", state);
+      window.location.href = url.toString();
+    }
 
     // Statuses that cannot be selected (fully locked)
     const LOCKED_STATUSES = ["Reserved", "Delivered"];
@@ -110,6 +138,7 @@
         headers:{"Content-Type":"application/json", Authorization:apiKey},
         body:JSON.stringify({query, variables}),
       });
+      if (res.status === 401) { clearToken(); throw new Error("AUTH_EXPIRED"); }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       if (json.errors) throw new Error(json.errors[0].message);
@@ -151,9 +180,9 @@
 
     function App() {
       const [apiKey,    setApiKey]    = useState("");
-      const [setupLoad, setSetupLoad] = useState(false);
-      const [setupErr,  setSetupErr]  = useState("");
-      const [screen,    setScreen]    = useState("setup");
+      const [authReady, setAuthReady] = useState(false);
+      const [authError, setAuthError] = useState("");
+      const [screen,    setScreen]    = useState("auth");
 
       const [poLines,         setPoLines]         = useState([]);
       const [subitemsByLine,  setSubitemsByLine]   = useState({});
@@ -171,61 +200,91 @@
       const [createdItem, setCreatedItem] = useState(null);
       const [wasQueued,   setWasQueued]   = useState(false);
 
-      /* ── Connect + load all data ── */
-      const handleSetup = async () => {
-        if (!apiKey.trim()) { setSetupErr("API key is required."); return; }
-        setSetupErr(""); setSetupLoad(true);
-        try {
-          // Load PO lines WITH their subitems for accurate counts
-          const [bd, ud] = await Promise.all([
-            gql(apiKey, `{
-              boards(ids:[${SLOT_BOARD_ID}]) {
-                items_page(limit:50) {
-                  items {
+      /* ── Load all board data ── */
+      const loadAllData = useCallback(async (key) => {
+        const [bd, ud] = await Promise.all([
+          gql(key, `{
+            boards(ids:[${SLOT_BOARD_ID}]) {
+              items_page(limit:50) {
+                items {
+                  id name
+                  group { title }
+                  column_values(ids:["dropdown_mm5ese7e","dropdown_mm5ef8kt","date4","numeric_mm5sv1e1"]) { id text }
+                  subitems {
                     id name
-                    group { title }
-                    column_values(ids:["dropdown_mm5ese7e","dropdown_mm5ef8kt","date4","numeric_mm5sv1e1"]) { id text }
-                    subitems {
-                      id name
-                      column_values(ids:["status","dropdown_mm65b542","dropdown_mm65c7mt","date_mm65h7tw"]) { id text }
-                    }
+                    column_values(ids:["status","dropdown_mm65b542","dropdown_mm65c7mt","date_mm65h7tw"]) { id text }
                   }
                 }
               }
-            }`),
-            gql(apiKey, `{ users(kind:all, limit:500) { id name email } }`),
-          ]);
-
-          const sbl = {};
-          const lines = bd.boards[0].items_page.items.map(item => {
-            const cols = colMap(item.column_values);
-            // Build subitem detail objects
-            const subs = (item.subitems||[]).map(si => {
-              const sc = colMap(si.column_values);
-              return { id:si.id, name:si.name, status:sc["status"]||"", voltage:sc["dropdown_mm65b542"]||"", manufacturer:sc["dropdown_mm65c7mt"]||"", deliveryDate:sc["date_mm65h7tw"]||"" };
-            });
-            sbl[item.id] = subs;
-            // Count selectable (not Reserved, not Delivered)
-            const selectableCount = subs.filter(s=>!LOCKED_STATUSES.includes(s.status)).length;
-            return {
-              id:item.id, name:item.name,
-              voltage:cols["dropdown_mm5ese7e"]||"",
-              manufacturer:cols["dropdown_mm5ef8kt"]||"",
-              deliveryDate:cols["date4"]||"",
-              poLineNum:parseFloat(cols["numeric_mm5sv1e1"]||"0"),
-              selectableCount,
-              totalCount:subs.length,
-            };
+            }
+          }`),
+          gql(key, `{ users(kind:all, limit:500) { id name email } }`),
+        ]);
+        const sbl = {};
+        const lines = bd.boards[0].items_page.items.map(item => {
+          const cols = colMap(item.column_values);
+          const subs = (item.subitems||[]).map(si => {
+            const sc = colMap(si.column_values);
+            return { id:si.id, name:si.name, status:sc["status"]||"", voltage:sc["dropdown_mm65b542"]||"", manufacturer:sc["dropdown_mm65c7mt"]||"", deliveryDate:sc["date_mm65h7tw"]||"" };
           });
-          lines.sort((a,b)=>a.poLineNum-b.poLineNum);
+          sbl[item.id] = subs;
+          const selectableCount = subs.filter(s=>!LOCKED_STATUSES.includes(s.status)).length;
+          return {
+            id:item.id, name:item.name,
+            voltage:cols["dropdown_mm5ese7e"]||"",
+            manufacturer:cols["dropdown_mm5ef8kt"]||"",
+            deliveryDate:cols["date4"]||"",
+            poLineNum:parseFloat(cols["numeric_mm5sv1e1"]||"0"),
+            selectableCount,
+            totalCount:subs.length,
+          };
+        });
+        lines.sort((a,b)=>a.poLineNum-b.poLineNum);
+        setPoLines(lines);
+        setSubitemsByLine(sbl);
+        setUsers(ud.users||[]);
+      }, []);
 
-          setPoLines(lines);
-          setSubitemsByLine(sbl);
-          setUsers(ud.users||[]);
-          setScreen("form");
-        } catch(e) { setSetupErr("Connection failed: "+e.message); }
-        finally { setSetupLoad(false); }
-      };
+      /* ── OAuth init ── */
+      useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const code  = params.get("code");
+        const state = params.get("state");
+        async function init() {
+          if (code) {
+            window.history.replaceState({}, "", window.location.pathname);
+            const saved = sessionStorage.getItem("monday_oauth_state");
+            sessionStorage.removeItem("monday_oauth_state");
+            if (saved && state !== saved) {
+              setAuthError("State mismatch — please try signing in again.");
+              setAuthReady(true); return;
+            }
+            try {
+              const token = await exchangeCode(code);
+              saveToken(token); setApiKey(token);
+              await loadAllData(token);
+              setScreen("form");
+            } catch(e) {
+              setAuthError(e.message === "AUTH_EXPIRED" ? "Session expired — please sign in again." : "Sign-in failed: "+e.message);
+            }
+            setAuthReady(true); return;
+          }
+          const stored = loadToken();
+          if (stored) {
+            try {
+              setApiKey(stored);
+              await loadAllData(stored);
+              setScreen("form");
+              setAuthReady(true); return;
+            } catch(e) {
+              clearToken();
+              if (e.message !== "AUTH_EXPIRED") setAuthError("Session expired — please sign in again.");
+            }
+          }
+          setAuthReady(true);
+        }
+        init();
+      }, [loadAllData]);
 
       /* ── Derived state from selected line ── */
       const lineSubitems    = subitemsByLine[selectedPoLineId] || [];
@@ -316,8 +375,8 @@
         { label:"362 kV — Hitachi", key:"362" },
       ];
 
-      /* ── SETUP ── */
-      if (screen==="setup") return (
+      /* ── AUTH ── */
+      if (screen==="auth") return (
         <div className="setup-wrap">
           <div className="setup-box">
             <div className="setup-logo-row">
@@ -330,17 +389,17 @@
               </div>
             </div>
             <div className="setup-divider"/>
-            <p style={{ color:"#4D6680", fontSize:13, marginBottom:22, lineHeight:1.6 }}>
-              Enter your Monday.com API key to connect. Your key is held only in memory for this session and is never stored.
-            </p>
-            <label className="bmcd-lbl">Monday.com API Key <span className="bmcd-req">*</span></label>
-            <input type="password" value={apiKey} onChange={e=>setApiKey(e.target.value)}
-              onKeyDown={e=>e.key==="Enter"&&handleSetup()} placeholder="eyJhbGciOiJIUzI1Ni..." className="setup-inp"/>
-            <div className="setup-hint">Profile → Developers → My Access Tokens</div>
-            {setupErr && <div className="err-box">{setupErr}</div>}
-            <button onClick={handleSetup} disabled={setupLoad} className="setup-btn">
-              {setupLoad ? "Connecting…" : "Connect & Open Form →"}
-            </button>
+            {!authReady ? (
+              <div style={{ textAlign:"center", padding:"24px 0", color:"#94A3B8", fontSize:13 }}>Signing you in…</div>
+            ) : (
+              <>
+                {authError && <div className="err-box" style={{ marginBottom:18 }}>{authError}</div>}
+                <p style={{ color:"#4D6680", fontSize:13, marginBottom:22, lineHeight:1.6 }}>
+                  Sign in with your Monday.com account to access the Breaker Slot Request Form.
+                </p>
+                <button onClick={startOAuth} className="setup-btn">Sign in with Monday.com →</button>
+              </>
+            )}
           </div>
         </div>
       );
@@ -649,6 +708,11 @@
 
             <div className="bmcd-footer">
               BURNS &amp; McDONNELL &nbsp;·&nbsp; BREAKER SLOT PROGRAM &nbsp;·&nbsp; CONFIDENTIAL — INTERNAL USE ONLY
+              &nbsp;&nbsp;·&nbsp;&nbsp;
+              <button onClick={()=>{clearToken();setApiKey("");setScreen("auth");setAuthReady(true);setAuthError("");}}
+                style={{ background:"none", border:"none", color:"#94A3B8", fontSize:10, cursor:"pointer", textDecoration:"underline", padding:0, letterSpacing:".07em" }}>
+                Sign Out
+              </button>
             </div>
           </div>
         </div>
