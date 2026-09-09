@@ -92,14 +92,12 @@
 <body>
   <div id="root"></div>
   <script type="text/babel">
-    const { useState, useEffect, useCallback } = React;
+    const { useState, useEffect } = React;
 
     const MONDAY_API        = "https://api.monday.com/v2";
     const SLOT_BOARD_ID     = 18422871700;
     const REQUESTS_BOARD_ID = 18422875681;
     const SUBITEMS_BOARD_ID = 18426331487;
-
-    const API_KEY = "eyJhbGci•••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••";
 
     // Statuses that cannot be selected (fully locked)
     const LOCKED_STATUSES = ["Reserved", "Delivered"];
@@ -112,7 +110,6 @@
         headers:{"Content-Type":"application/json", Authorization:apiKey},
         body:JSON.stringify({query, variables}),
       });
-      if (res.status === 401) throw new Error("AUTH_EXPIRED");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       if (json.errors) throw new Error(json.errors[0].message);
@@ -145,12 +142,18 @@
     };
 
     const LogoMark = () => (
-      <img src="https://raw.githubusercontent.com/Dsantoy/breaker-tools/main/ampersand-mark-white.svg" width="34" height="34" alt=""/>
+      <svg width="34" height="34" viewBox="0 0 34 34" fill="none">
+        <path d="M7 27 L17 5" stroke="white" strokeWidth="5.5" strokeLinecap="round"/>
+        <path d="M15 27 L25 5" stroke="white" strokeWidth="5.5" strokeLinecap="round"/>
+        <path d="M3 17 L31 17" stroke="#E6F001" strokeWidth="3.5" strokeLinecap="round" opacity="0.9"/>
+      </svg>
     );
 
     function App() {
-      const [apiKey,    setApiKey]    = useState(API_KEY);
-      const [screen,    setScreen]    = useState("loading");
+      const [apiKey,    setApiKey]    = useState("");
+      const [setupLoad, setSetupLoad] = useState(false);
+      const [setupErr,  setSetupErr]  = useState("");
+      const [screen,    setScreen]    = useState("setup");
 
       const [poLines,         setPoLines]         = useState([]);
       const [subitemsByLine,  setSubitemsByLine]   = useState({});
@@ -168,55 +171,61 @@
       const [createdItem, setCreatedItem] = useState(null);
       const [wasQueued,   setWasQueued]   = useState(false);
 
-      /* ── Load all board data ── */
-      const loadAllData = useCallback(async (key) => {
-        const [bd, ud] = await Promise.all([
-          gql(key, `{
-            boards(ids:[${SLOT_BOARD_ID}]) {
-              items_page(limit:50) {
-                items {
-                  id name
-                  group { title }
-                  column_values(ids:["dropdown_mm5ese7e","dropdown_mm5ef8kt","date4","numeric_mm5sv1e1"]) { id text }
-                  subitems {
+      /* ── Connect + load all data ── */
+      const handleSetup = async () => {
+        if (!apiKey.trim()) { setSetupErr("API key is required."); return; }
+        setSetupErr(""); setSetupLoad(true);
+        try {
+          // Load PO lines WITH their subitems for accurate counts
+          const [bd, ud] = await Promise.all([
+            gql(apiKey, `{
+              boards(ids:[${SLOT_BOARD_ID}]) {
+                items_page(limit:50) {
+                  items {
                     id name
-                    column_values(ids:["status","dropdown_mm65b542","dropdown_mm65c7mt","date_mm65h7tw"]) { id text }
+                    group { title }
+                    column_values(ids:["dropdown_mm5ese7e","dropdown_mm5ef8kt","date4","numeric_mm5sv1e1"]) { id text }
+                    subitems {
+                      id name
+                      column_values(ids:["status","dropdown_mm65b542","dropdown_mm65c7mt","date_mm65h7tw"]) { id text }
+                    }
                   }
                 }
               }
-            }
-          }`),
-          gql(key, `{ users(kind:all, limit:500) { id name email } }`),
-        ]);
-        const sbl = {};
-        const lines = bd.boards[0].items_page.items.map(item => {
-          const cols = colMap(item.column_values);
-          const subs = (item.subitems||[]).map(si => {
-            const sc = colMap(si.column_values);
-            return { id:si.id, name:si.name, status:sc["status"]||"", voltage:sc["dropdown_mm65b542"]||"", manufacturer:sc["dropdown_mm65c7mt"]||"", deliveryDate:sc["date_mm65h7tw"]||"" };
-          });
-          sbl[item.id] = subs;
-          const selectableCount = subs.filter(s=>!LOCKED_STATUSES.includes(s.status)).length;
-          return {
-            id:item.id, name:item.name,
-            voltage:cols["dropdown_mm5ese7e"]||"",
-            manufacturer:cols["dropdown_mm5ef8kt"]||"",
-            deliveryDate:cols["date4"]||"",
-            poLineNum:parseFloat(cols["numeric_mm5sv1e1"]||"0"),
-            selectableCount,
-            totalCount:subs.length,
-          };
-        });
-        lines.sort((a,b)=>a.poLineNum-b.poLineNum);
-        setPoLines(lines);
-        setSubitemsByLine(sbl);
-        setUsers(ud.users||[]);
-      }, []);
+            }`),
+            gql(apiKey, `{ users(kind:all, limit:500) { id name email } }`),
+          ]);
 
-      /* ── Auto-load on mount ── */
-      useEffect(() => {
-        loadAllData(API_KEY).finally(() => setScreen("form"));
-      }, [loadAllData]);
+          const sbl = {};
+          const lines = bd.boards[0].items_page.items.map(item => {
+            const cols = colMap(item.column_values);
+            // Build subitem detail objects
+            const subs = (item.subitems||[]).map(si => {
+              const sc = colMap(si.column_values);
+              return { id:si.id, name:si.name, status:sc["status"]||"", voltage:sc["dropdown_mm65b542"]||"", manufacturer:sc["dropdown_mm65c7mt"]||"", deliveryDate:sc["date_mm65h7tw"]||"" };
+            });
+            sbl[item.id] = subs;
+            // Count selectable (not Reserved, not Delivered)
+            const selectableCount = subs.filter(s=>!LOCKED_STATUSES.includes(s.status)).length;
+            return {
+              id:item.id, name:item.name,
+              voltage:cols["dropdown_mm5ese7e"]||"",
+              manufacturer:cols["dropdown_mm5ef8kt"]||"",
+              deliveryDate:cols["date4"]||"",
+              poLineNum:parseFloat(cols["numeric_mm5sv1e1"]||"0"),
+              selectableCount,
+              totalCount:subs.length,
+            };
+          });
+          lines.sort((a,b)=>a.poLineNum-b.poLineNum);
+
+          setPoLines(lines);
+          setSubitemsByLine(sbl);
+          setUsers(ud.users||[]);
+          setScreen("form");
+        } catch(e) { setSetupErr("Connection failed: "+e.message); }
+        finally { setSetupLoad(false); }
+      };
 
       /* ── Derived state from selected line ── */
       const lineSubitems    = subitemsByLine[selectedPoLineId] || [];
@@ -307,10 +316,32 @@
         { label:"362 kV — Hitachi", key:"362" },
       ];
 
-      /* ── LOADING ── */
-      if (screen==="loading") return (
+      /* ── SETUP ── */
+      if (screen==="setup") return (
         <div className="setup-wrap">
-          <div style={{ textAlign:"center", color:"#94A3B8", fontSize:13 }}>Loading…</div>
+          <div className="setup-box">
+            <div className="setup-logo-row">
+              <div style={{ background:"#002D59", borderRadius:10, width:42, height:42, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                <LogoMark/>
+              </div>
+              <div>
+                <div style={{ fontSize:16, fontWeight:800, color:"#002D59", letterSpacing:".04em" }}>BURNS &amp; McDONNELL</div>
+                <div style={{ fontSize:11, color:"#94A3B8", marginTop:2 }}>HV Circuit Breaker Slot Program</div>
+              </div>
+            </div>
+            <div className="setup-divider"/>
+            <p style={{ color:"#4D6680", fontSize:13, marginBottom:22, lineHeight:1.6 }}>
+              Enter your Monday.com API key to connect. Your key is held only in memory for this session and is never stored.
+            </p>
+            <label className="bmcd-lbl">Monday.com API Key <span className="bmcd-req">*</span></label>
+            <input type="password" value={apiKey} onChange={e=>setApiKey(e.target.value)}
+              onKeyDown={e=>e.key==="Enter"&&handleSetup()} placeholder="eyJhbGciOiJIUzI1Ni..." className="setup-inp"/>
+            <div className="setup-hint">Profile → Developers → My Access Tokens</div>
+            {setupErr && <div className="err-box">{setupErr}</div>}
+            <button onClick={handleSetup} disabled={setupLoad} className="setup-btn">
+              {setupLoad ? "Connecting…" : "Connect & Open Form →"}
+            </button>
+          </div>
         </div>
       );
 
