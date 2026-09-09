@@ -142,8 +142,6 @@
   <script type="text/babel">
     const { useState, useEffect, useCallback } = React;
 
-    const API_KEY = "eyJhbGci•••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••";
-
     const MONDAY_API        = "https://api.monday.com/v2";
     const REQUESTS_BOARD_ID = 18422875681;
     const SUBITEMS_BOARD_ID = 18426331487;
@@ -162,7 +160,6 @@
         headers: { "Content-Type": "application/json", Authorization: apiKey.replace(/[^\x20-\xFF]/g, "").trim() },
         body: JSON.stringify({ query, variables }),
       });
-      if (res.status === 401) throw new Error("AUTH_EXPIRED");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       if (json.errors) throw new Error(json.errors[0].message);
@@ -174,12 +171,18 @@
 
     /* BMcD logo mark */
     const LogoMark = ({ size=28 }) => (
-      <img src="https://raw.githubusercontent.com/Dsantoy/breaker-tools/main/ampersand-mark-white.svg" width={size} height={size} alt=""/>
+      <svg width={size} height={size} viewBox="0 0 28 28" fill="none">
+        <path d="M5 22 L13 4" stroke="white" strokeWidth="4.5" strokeLinecap="round"/>
+        <path d="M12 22 L20 4" stroke="white" strokeWidth="4.5" strokeLinecap="round"/>
+        <path d="M2 13 L26 13" stroke="#E6F001" strokeWidth="3" strokeLinecap="round" opacity="0.9"/>
+      </svg>
     );
 
     function App() {
-      const [apiKey,      setApiKey]      = useState(API_KEY);
-      const [screen,      setScreen]      = useState("loading");
+      const [apiKey,      setApiKey]      = useState("");
+      const [setupLoad,   setSetupLoad]   = useState(false);
+      const [setupErr,    setSetupErr]    = useState("");
+      const [screen,      setScreen]      = useState("setup");
       const [requests,    setRequests]    = useState({ pending:[], history:[] });
       const [loading,     setLoading]     = useState(false);
       const [loadErr,     setLoadErr]     = useState("");
@@ -189,10 +192,17 @@
       const [syncing,     setSyncing]     = useState(false);
       const [syncMsg,     setSyncMsg]     = useState("");
 
-      /* ── Auto-load on mount ── */
-      useEffect(() => {
-        loadRequests(API_KEY).finally(() => setScreen("dashboard"));
-      }, []);
+      /* ── Connect ── */
+      const handleSetup = async () => {
+        if (!apiKey.trim()) { setSetupErr("API key is required."); return; }
+        setSetupErr(""); setSetupLoad(true);
+        try {
+          await gql(apiKey, `{ me { id } }`);
+          setScreen("dashboard");
+          loadRequests(apiKey);
+        } catch(e) { setSetupErr("Connection failed: "+e.message); }
+        finally { setSetupLoad(false); }
+      };
 
       /* ── Load requests ── */
       const loadRequests = useCallback(async (key = apiKey) => {
@@ -396,10 +406,33 @@
         }
       };
 
-      /* ── LOADING ── */
-      if (screen==="loading") return (
+      /* ── SETUP SCREEN ── */
+      if (screen==="setup") return (
         <div className="setup-wrap">
-          <div style={{ textAlign:"center", color:"#94A3B8", fontSize:13 }}>Loading…</div>
+          <div className="setup-box">
+            <div className="setup-logo-row">
+              <div style={{ background:"#002D59", borderRadius:10, width:42, height:42, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                <LogoMark/>
+              </div>
+              <div>
+                <div style={{ fontSize:16, fontWeight:800, color:"#002D59", letterSpacing:".03em" }}>BURNS &amp; McDONNELL</div>
+                <div style={{ fontSize:11, color:"#94A3B8", marginTop:2 }}>BSF Review Dashboard</div>
+              </div>
+            </div>
+            <div className="setup-divider"/>
+            <p style={{ color:"#4D6680", fontSize:13, marginBottom:22, lineHeight:1.6 }}>
+              Reviewer-only tool. Approving a request automatically marks all selected breaker units as Reserved in Monday.com, updates the slot Reserved Qty, and writes the opportunity number to each unit.
+            </p>
+            <label className="bmcd-lbl">Monday.com API Key <span style={{ color:"#DC2626" }}>*</span></label>
+            <input type="password" value={apiKey} onChange={e=>setApiKey(e.target.value)}
+              onKeyDown={e=>e.key==="Enter"&&handleSetup()}
+              placeholder="eyJhbGciOiJIUzI1Ni..." className="setup-inp"/>
+            <div className="setup-hint">Profile → Developers → My Access Tokens</div>
+            {setupErr && <div className="err-box">{setupErr}</div>}
+            <button onClick={handleSetup} disabled={setupLoad} className="setup-btn">
+              {setupLoad ? "Connecting…" : "Open Review Dashboard →"}
+            </button>
+          </div>
         </div>
       );
 
