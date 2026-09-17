@@ -118,6 +118,22 @@
 
     function colMap(cvs) { const m={}; cvs.forEach(c=>{m[c.id]=c.text;}); return m; }
 
+    // Pulls every user on the monday.com account, paging past the 500-per-request cap.
+    async function fetchAllUsers(apiKey) {
+      const perPage = 500;
+      let page = 1;
+      let all = [];
+      while (true) {
+        const ud = await gql(apiKey, `{ users(kind:all, limit:${perPage}, page:${page}) { id name email } }`);
+        const batch = ud.users || [];
+        all = all.concat(batch);
+        if (batch.length < perPage) break;   // last page reached
+        page += 1;
+        if (page > 20) break;                // safety cap (~10,000 users)
+      }
+      return all;
+    }
+
     const statusStyle = (status) => {
       if (status==="Available")           return { color:"#1A9B5A", bg:"#DCFCE7", label:"Available" };
       if (status==="Pending Review")      return { color:"#92400E", bg:"#FEF3C7", label:"Pending Review" };
@@ -154,6 +170,7 @@
       const [poLines,         setPoLines]         = useState([]);
       const [subitemsByLine,  setSubitemsByLine]   = useState({});
       const [users,           setUsers]            = useState([]);
+      const [meId,            setMeId]             = useState("");
 
       const [selectedPoLineId, setSelectedPoLineId] = useState("");
       const [selectedIds,      setSelectedIds]       = useState([]);
@@ -173,7 +190,7 @@
         setSetupErr(""); setSetupLoad(true);
         try {
           // Load PO lines WITH their subitems for accurate counts
-          const [bd, ud] = await Promise.all([
+          const [bd, allUsers] = await Promise.all([
             gql(apiKey, `{
               boards(ids:[${SLOT_BOARD_ID}]) {
                 items_page(limit:50) {
@@ -189,7 +206,7 @@
                 }
               }
             }`),
-            gql(apiKey, `{ users(kind:all, limit:500) { id name email } }`),
+            fetchAllUsers(apiKey),
           ]);
 
           const sbl = {};
@@ -217,8 +234,20 @@
 
           setPoLines(lines);
           setSubitemsByLine(sbl);
-          setUsers(ud.users||[]);
+          setUsers(allUsers);
           setScreen("form");
+
+          // Best-effort: identify who this API key belongs to and pre-select them
+          // as the requester. If this lookup fails for any reason, we simply leave
+          // the field blank and the requester picks themselves from the dropdown,
+          // exactly as before.
+          try {
+            const md = await gql(apiKey, `{ me { id name email } }`);
+            if (md?.me?.id) {
+              setMeId(String(md.me.id));
+              setForm(f=>({...f, requesterId:String(md.me.id)}));
+            }
+          } catch(e) { /* silent fallback to manual selection */ }
         } catch(e) { setSetupErr("Connection failed: "+e.message); }
         finally { setSetupLoad(false); }
       };
@@ -452,7 +481,7 @@
                   <label className="bmcd-lbl">Requester<span className="bmcd-req">*</span></label>
                   <select value={form.requesterId} onChange={e=>setForm(f=>({...f,requesterId:e.target.value}))} className="std-inp">
                     <option value="">Select your name…</option>
-                    {users.map(u=><option key={u.id} value={u.id}>{u.name}{u.email?` (${u.email})`:""}</option>)}
+                    {users.map(u=><option key={u.id} value={u.id}>{u.name}{u.email?` (${u.email})`:""}{meId&&u.id===meId?" — you":""}</option>)}
                   </select>
                 </div>
                 <div>
