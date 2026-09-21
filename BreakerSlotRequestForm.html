@@ -94,15 +94,12 @@
   <script type="text/babel">
     const { useState, useEffect } = React;
 
-    // TODO: replace these two placeholders with the actual webhook URLs once the
-    // Make.com (or equivalent) scenarios are built. See the proxy blueprint doc.
-    const PROXY_READ_URL    = "https://hook.us1.make.com/REPLACE_WITH_READ_SCENARIO_WEBHOOK";
-    const PROXY_SUBMIT_URL  = "https://hook.us1.make.com/REPLACE_WITH_SUBMIT_SCENARIO_WEBHOOK";
-    // Shared secret checked by a Filter step at the start of each Make scenario,
-    // so the webhook can't be triggered by anyone who just finds the URL.
-    // This is NOT a real secret (it's visible in this public HTML) — it only
-    // blocks casual/accidental hits, not a determined actor. Treat it as a
-    // door label, not a lock.
+    // TODO: replace with your deployed Cloudflare Worker's URL, e.g.
+    // "https://breaker-slot.yourname.workers.dev" — no trailing slash.
+    const PROXY_BASE_URL    = "https://REPLACE_WITH_YOUR_WORKER.workers.dev";
+    const PROXY_READ_URL    = PROXY_BASE_URL + "/read";
+    const PROXY_SUBMIT_URL  = PROXY_BASE_URL + "/submit";
+    // Must match the PROXY_SHARED_SECRET variable set in the Worker's settings.
     const PROXY_SHARED_SECRET = "REPLACE_WITH_SHARED_SECRET";
 
     const SLOT_BOARD_ID     = 18422871700;
