@@ -94,45 +94,36 @@
   <script type="text/babel">
     const { useState, useEffect } = React;
 
-    const MONDAY_API        = "https://api.monday.com/v2";
+    // TODO: replace these two placeholders with the actual webhook URLs once the
+    // Make.com (or equivalent) scenarios are built. See the proxy blueprint doc.
+    const PROXY_READ_URL    = "https://hook.us1.make.com/REPLACE_WITH_READ_SCENARIO_WEBHOOK";
+    const PROXY_SUBMIT_URL  = "https://hook.us1.make.com/REPLACE_WITH_SUBMIT_SCENARIO_WEBHOOK";
+    // Shared secret checked by a Filter step at the start of each Make scenario,
+    // so the webhook can't be triggered by anyone who just finds the URL.
+    // This is NOT a real secret (it's visible in this public HTML) — it only
+    // blocks casual/accidental hits, not a determined actor. Treat it as a
+    // door label, not a lock.
+    const PROXY_SHARED_SECRET = "REPLACE_WITH_SHARED_SECRET";
+
     const SLOT_BOARD_ID     = 18422871700;
     const REQUESTS_BOARD_ID = 18422875681;
     const SUBITEMS_BOARD_ID = 18426331487;
+
+    // Only B&M email addresses may submit. This is a cheap client-side guard for
+    // UX only — the proxy must enforce this same rule server-side, since anyone
+    // could bypass client-side JS entirely.
+    const ALLOWED_EMAIL_DOMAIN = "burnsmcd.com";
+    const isValidEmail = (email) => {
+      const e = (email||"").trim().toLowerCase();
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e) && e.endsWith("@"+ALLOWED_EMAIL_DOMAIN);
+    };
 
     // Statuses that cannot be selected (fully locked)
     const LOCKED_STATUSES = ["Reserved", "Delivered"];
     // Statuses that are selectable but mean queue position
     const QUEUE_STATUSES = ["Pending Review", "Pending Reservation"];
 
-    async function gql(apiKey, query, variables = {}) {
-      const res = await fetch(MONDAY_API, {
-        method:"POST",
-        headers:{"Content-Type":"application/json", Authorization:apiKey},
-        body:JSON.stringify({query, variables}),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = await res.json();
-      if (json.errors) throw new Error(json.errors[0].message);
-      return json.data;
-    }
-
     function colMap(cvs) { const m={}; cvs.forEach(c=>{m[c.id]=c.text;}); return m; }
-
-    // Pulls every user on the monday.com account, paging past the 500-per-request cap.
-    async function fetchAllUsers(apiKey) {
-      const perPage = 500;
-      let page = 1;
-      let all = [];
-      while (true) {
-        const ud = await gql(apiKey, `{ users(kind:all, limit:${perPage}, page:${page}) { id name email } }`);
-        const batch = ud.users || [];
-        all = all.concat(batch);
-        if (batch.length < perPage) break;   // last page reached
-        page += 1;
-        if (page > 20) break;                // safety cap (~10,000 users)
-      }
-      return all;
-    }
 
     const statusStyle = (status) => {
       if (status==="Available")           return { color:"#1A9B5A", bg:"#DCFCE7", label:"Available" };
@@ -162,21 +153,18 @@
     );
 
     function App() {
-      const [apiKey,    setApiKey]    = useState("");
-      const [setupLoad, setSetupLoad] = useState(false);
+      const [setupLoad, setSetupLoad] = useState(true);
       const [setupErr,  setSetupErr]  = useState("");
-      const [screen,    setScreen]    = useState("setup");
+      const [screen,    setScreen]    = useState("loading");
 
       const [poLines,         setPoLines]         = useState([]);
       const [subitemsByLine,  setSubitemsByLine]   = useState({});
-      const [users,           setUsers]            = useState([]);
-      const [meId,            setMeId]             = useState("");
 
       const [selectedPoLineId, setSelectedPoLineId] = useState("");
       const [selectedIds,      setSelectedIds]       = useState([]);
 
       const [form, setForm] = useState({
-        projectName:"", clientName:"", requesterId:"",
+        projectName:"", clientName:"", requesterName:"", requesterEmail:"",
         opportunityNumber:"", estimatedValue:"", breakersEnable:"", dropDeadDate:"",
       });
       const [submitting,  setSubmitting]  = useState(false);
@@ -184,41 +172,24 @@
       const [createdItem, setCreatedItem] = useState(null);
       const [wasQueued,   setWasQueued]   = useState(false);
 
-      /* ── Connect + load all data ── */
-      const handleSetup = async () => {
-        if (!apiKey.trim()) { setSetupErr("API key is required."); return; }
+      /* ── Load availability data on mount, via the read proxy ── */
+      const loadData = async () => {
         setSetupErr(""); setSetupLoad(true);
         try {
-          // Load PO lines WITH their subitems for accurate counts
-          const [bd, allUsers] = await Promise.all([
-            gql(apiKey, `{
-              boards(ids:[${SLOT_BOARD_ID}]) {
-                items_page(limit:50) {
-                  items {
-                    id name
-                    group { title }
-                    column_values(ids:["dropdown_mm5ese7e","dropdown_mm5ef8kt","date4","numeric_mm5sv1e1"]) { id text }
-                    subitems {
-                      id name
-                      column_values(ids:["status","dropdown_mm65b542","dropdown_mm65c7mt","date_mm65h7tw"]) { id text }
-                    }
-                  }
-                }
-              }
-            }`),
-            fetchAllUsers(apiKey),
-          ]);
+          const res = await fetch(PROXY_READ_URL, { headers:{ "X-Proxy-Secret": PROXY_SHARED_SECRET } });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const bd = await res.json();
+          // Expected shape mirrors the original Monday GraphQL response exactly:
+          // { boards: [ { items_page: { items: [ ... ] } } ] }
 
           const sbl = {};
           const lines = bd.boards[0].items_page.items.map(item => {
             const cols = colMap(item.column_values);
-            // Build subitem detail objects
             const subs = (item.subitems||[]).map(si => {
               const sc = colMap(si.column_values);
               return { id:si.id, name:si.name, status:sc["status"]||"", voltage:sc["dropdown_mm65b542"]||"", manufacturer:sc["dropdown_mm65c7mt"]||"", deliveryDate:sc["date_mm65h7tw"]||"" };
             });
             sbl[item.id] = subs;
-            // Count selectable (not Reserved, not Delivered)
             const selectableCount = subs.filter(s=>!LOCKED_STATUSES.includes(s.status)).length;
             return {
               id:item.id, name:item.name,
@@ -234,104 +205,74 @@
 
           setPoLines(lines);
           setSubitemsByLine(sbl);
-          setUsers(allUsers);
           setScreen("form");
-
-          // Best-effort: identify who this API key belongs to and pre-select them
-          // as the requester. If this lookup fails for any reason, we simply leave
-          // the field blank and the requester picks themselves from the dropdown,
-          // exactly as before.
-          try {
-            const md = await gql(apiKey, `{ me { id name email } }`);
-            if (md?.me?.id) {
-              setMeId(String(md.me.id));
-              setForm(f=>({...f, requesterId:String(md.me.id)}));
-            }
-          } catch(e) { /* silent fallback to manual selection */ }
-        } catch(e) { setSetupErr("Connection failed: "+e.message); }
+        } catch(e) { setSetupErr("Could not load slot availability: "+e.message); }
         finally { setSetupLoad(false); }
       };
+
+      useEffect(() => { loadData(); }, []);
 
       /* ── Derived state from selected line ── */
       const lineSubitems    = subitemsByLine[selectedPoLineId] || [];
       const selectable      = lineSubitems.filter(s=>!LOCKED_STATUSES.includes(s.status));
       const locked          = lineSubitems.filter(s=>LOCKED_STATUSES.includes(s.status));
       const selectedLine    = poLines.find(l=>l.id===selectedPoLineId);
-      const selectedUser    = users.find(u=>u.id===form.requesterId);
       const hasQueueItems   = selectedIds.some(id=>QUEUE_STATUSES.includes(selectable.find(s=>s.id===id)?.status||""));
       const toggle = id => setSelectedIds(p=>p.includes(id)?p.filter(x=>x!==id):[...p,id]);
 
-      const isValid = form.projectName.trim()&&form.clientName.trim()&&form.requesterId&&
+      const isValid = form.projectName.trim()&&form.clientName.trim()&&
+        form.requesterName.trim()&&isValidEmail(form.requesterEmail)&&
         form.opportunityNumber.trim()&&form.estimatedValue&&form.breakersEnable&&
         form.dropDeadDate&&selectedPoLineId&&selectedIds.length>0;
 
-      /* ── Submit ── */
+      /* ── Submit — everything (identity lookup, live collision check, item
+         creation, subitem status updates) happens server-side in the proxy.
+         The client only sends the raw submission and displays the result. ── */
       const handleSubmit = async () => {
-        if (!isValid) { setSubmitErr("Please complete all required fields and select at least one breaker unit."); return; }
+        if (!isValid) { setSubmitErr("Please complete all required fields, use a valid @"+ALLOWED_EMAIL_DOMAIN+" email, and select at least one breaker unit."); return; }
         setSubmitErr(""); setSubmitting(true);
         try {
-          // 1. Live-check current breaker statuses right now (not from cached local state)
-          //    This catches cases where another user submitted first since this form loaded
-          const liveData = await gql(apiKey, `{ items(ids:[${selectedIds.join(",")}]) { id column_values(ids:["status"]) { id text } } }`);
-          const liveStatuses = {};
-          liveData.items.forEach(item => {
-            liveStatuses[item.id] = item.column_values.find(c=>c.id==="status")?.text || "";
-          });
-          const actualHasQueueItems = selectedIds.some(id => QUEUE_STATUSES.includes(liveStatuses[id] || ""));
-          const cv = {
-            "text_mm5es7sz":        form.projectName,
-            "short_texthrb2ladn":   form.clientName,
-            "short_textfukcenx9":   form.opportunityNumber,
-            "number8jhwmqe9":       parseFloat(form.estimatedValue)||0,
-            "numeric_mm5es9c9":     selectedIds.length,
-            "text_mm66tjan":        selectedIds.join("|"),
-            "peopleda149l5r":       { personsAndTeams:[{ id:parseInt(form.requesterId), kind:"person" }] },
-            "single_selectjej2zay": { label:form.breakersEnable },
-            "date3z59ugdu":         { date:form.dropDeadDate },
-            "status":               { label: actualHasQueueItems ? "In Queue" : "Working on it" },
-            "board_relation_mm5e11py": { item_ids:[parseInt(selectedPoLineId)] },
-            "board_relation_mm65ppt4": { item_ids:selectedIds.map(Number) },
+          const payload = {
+            projectName:        form.projectName,
+            clientName:         form.clientName,
+            requesterName:      form.requesterName.trim(),
+            requesterEmail:     form.requesterEmail.trim().toLowerCase(),
+            opportunityNumber:  form.opportunityNumber,
+            estimatedValue:     parseFloat(form.estimatedValue)||0,
+            breakersEnable:     form.breakersEnable,
+            dropDeadDate:       form.dropDeadDate,
+            poLineId:           selectedPoLineId,
+            selectedIds:        selectedIds,
           };
-          const result = await gql(apiKey,
-            `mutation CreateRequest($boardId:ID!,$name:String!,$cv:JSON!,$groupId:String!) { create_item(board_id:$boardId,item_name:$name,column_values:$cv,group_id:$groupId) { id url } }`,
-            { boardId:String(REQUESTS_BOARD_ID), name:form.opportunityNumber, cv:JSON.stringify(cv), groupId:"topics" }
-          );
+          const res = await fetch(PROXY_SUBMIT_URL, {
+            method:"POST", headers:{"Content-Type":"application/json", "X-Proxy-Secret": PROXY_SHARED_SECRET}, body:JSON.stringify(payload),
+          });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const result = await res.json();
+          if (!result.success) throw new Error(result.error || "Submission failed.");
 
-          // 2. Update each AVAILABLE breaker to "Pending Review" using live status
-          //    Queue-status breakers stay unchanged
-          for (const breakerId of selectedIds) {
-            if ((liveStatuses[breakerId] || "") === "Available") {
-              try {
-                await gql(apiKey,
-                  `mutation($itemId:ID!,$boardId:ID!,$cv:JSON!){ change_multiple_column_values(item_id:$itemId,board_id:$boardId,column_values:$cv,create_labels_if_missing:true){ id } }`,
-                  { itemId:String(breakerId), boardId:String(SUBITEMS_BOARD_ID), cv:JSON.stringify({ status:{ label:"Pending Review" } }) }
-                );
-              } catch(e) { console.error("Status update error:", e.message); }
-            }
-          }
-
-          // 3. Update local subitem cache so same-session re-submissions are correct
+          // result.updatedIds: subitem ids the proxy actually flipped Available -> Pending Review
+          // (ids that were already queue-status are left untouched, same as before)
           setSubitemsByLine(prev => {
             const updated = { ...prev };
             if (updated[selectedPoLineId]) {
+              const flipped = new Set(result.updatedIds || []);
               updated[selectedPoLineId] = updated[selectedPoLineId].map(s =>
-                (selectedIds.includes(s.id) && (liveStatuses[s.id]||"")==="Available")
-                  ? { ...s, status:"Pending Review" }
-                  : s
+                flipped.has(s.id) ? { ...s, status:"Pending Review" } : s
               );
             }
             return updated;
           });
 
-          setWasQueued(actualHasQueueItems);
-          setCreatedItem(result.create_item);
+          setWasQueued(!!result.wasQueued);
+          setCreatedItem({ url: result.itemUrl });
           setScreen("success");
         } catch(e) { setSubmitErr("Submission failed: "+e.message); }
         finally { setSubmitting(false); }
       };
 
       const reset = () => {
-        setForm({ projectName:"", clientName:"", requesterId:"", opportunityNumber:"", estimatedValue:"", breakersEnable:"", dropDeadDate:"" });
+        setForm({ projectName:"", clientName:"", requesterName:"", requesterEmail:"", opportunityNumber:"", estimatedValue:"", breakersEnable:"", dropDeadDate:"" });
         setSelectedPoLineId(""); setSelectedIds([]); setSubmitErr(""); setCreatedItem(null); setWasQueued(false);
       };
 
@@ -342,7 +283,7 @@
       ];
 
       /* ── SETUP ── */
-      if (screen==="setup") return (
+      if (screen==="loading") return (
         <div className="setup-wrap">
           <div className="setup-box">
             <div className="setup-logo-row">
@@ -355,17 +296,18 @@
               </div>
             </div>
             <div className="setup-divider"/>
-            <p style={{ color:"#4D6680", fontSize:13, marginBottom:22, lineHeight:1.6 }}>
-              Enter your Monday.com API key to connect. Your key is held only in memory for this session and is never stored.
-            </p>
-            <label className="bmcd-lbl">Monday.com API Key <span className="bmcd-req">*</span></label>
-            <input type="password" value={apiKey} onChange={e=>setApiKey(e.target.value)}
-              onKeyDown={e=>e.key==="Enter"&&handleSetup()} placeholder="eyJhbGciOiJIUzI1Ni..." className="setup-inp"/>
-            <div className="setup-hint">Profile → Developers → My Access Tokens</div>
-            {setupErr && <div className="err-box">{setupErr}</div>}
-            <button onClick={handleSetup} disabled={setupLoad} className="setup-btn">
-              {setupLoad ? "Connecting…" : "Connect & Open Form →"}
-            </button>
+            {setupErr ? (
+              <>
+                <div className="err-box">{setupErr}</div>
+                <button onClick={loadData} disabled={setupLoad} className="setup-btn">
+                  {setupLoad ? "Retrying…" : "Retry"}
+                </button>
+              </>
+            ) : (
+              <p style={{ color:"#4D6680", fontSize:13, lineHeight:1.6, textAlign:"center" }}>
+                Loading current breaker availability…
+              </p>
+            )}
           </div>
         </div>
       );
@@ -395,7 +337,7 @@
                 ["Opportunity #",    form.opportunityNumber],
                 ["PO Line",          selectedLine?.name||"—"],
                 ["Breakers Selected",`${selectedIds.length} unit${selectedIds.length!==1?"s":""}`],
-                ["Requester",        selectedUser?.name||"—"],
+                ["Requester",        form.requesterName ? `${form.requesterName} (${form.requesterEmail})` : "—"],
               ].map(([k,v])=>(
                 <div key={k} style={{ display:"flex", justifyContent:"space-between", fontSize:12, color:"#334155", marginBottom:5, gap:12 }}>
                   <span style={{ color:"#94A3B8" }}>{k}</span>
@@ -478,30 +420,34 @@
 
               <div className="g2">
                 <div>
-                  <label className="bmcd-lbl">Requester<span className="bmcd-req">*</span></label>
-                  <select value={form.requesterId} onChange={e=>setForm(f=>({...f,requesterId:e.target.value}))} className="std-inp">
-                    <option value="">Select your name…</option>
-                    {users.map(u=><option key={u.id} value={u.id}>{u.name}{u.email?` (${u.email})`:""}{meId&&u.id===meId?" — you":""}</option>)}
-                  </select>
+                  <label className="bmcd-lbl">Requester Name<span className="bmcd-req">*</span></label>
+                  <input value={form.requesterName} onChange={e=>setForm(f=>({...f,requesterName:e.target.value}))} className="std-inp" placeholder="e.g. Jane Doe"/>
                 </div>
+                <div>
+                  <label className="bmcd-lbl">Requester Email<span className="bmcd-req">*</span></label>
+                  <input type="email" value={form.requesterEmail} onChange={e=>setForm(f=>({...f,requesterEmail:e.target.value}))} className="std-inp" placeholder={"you@"+ALLOWED_EMAIL_DOMAIN}/>
+                  {form.requesterEmail.trim() && !isValidEmail(form.requesterEmail) && (
+                    <div style={{ color:"#DF2F4A", fontSize:11, marginTop:4 }}>Must be a valid @{ALLOWED_EMAIL_DOMAIN} email.</div>
+                  )}
+                </div>
+              </div>
+
+              <div className="g2">
                 <div>
                   <label className="bmcd-lbl">Opportunity Number<span className="bmcd-req">*</span></label>
                   <input value={form.opportunityNumber} onChange={e=>setForm(f=>({...f,opportunityNumber:e.target.value}))} className="std-inp" placeholder="e.g. OPP073319"/>
+                </div>
+                <div>
+                  <label className="bmcd-lbl">BMcD Estimated Project Value (USD)<span className="bmcd-req">*</span></label>
+                  <input type="number" min="0" value={form.estimatedValue} onChange={e=>setForm(f=>({...f,estimatedValue:e.target.value}))} className="std-inp" placeholder="e.g. 5000000"/>
                 </div>
               </div>
 
               <div className="g2" style={{ marginBottom:14 }}>
                 <div>
-                  <label className="bmcd-lbl">BMcD Estimated Project Value (USD)<span className="bmcd-req">*</span></label>
-                  <input type="number" min="0" value={form.estimatedValue} onChange={e=>setForm(f=>({...f,estimatedValue:e.target.value}))} className="std-inp" placeholder="e.g. 5000000"/>
-                </div>
-                <div>
                   <label className="bmcd-lbl">Drop-Dead Customer PO Release Date<span className="bmcd-req">*</span></label>
                   <input type="date" value={form.dropDeadDate} onChange={e=>setForm(f=>({...f,dropDeadDate:e.target.value}))} className="std-inp"/>
                 </div>
-              </div>
-
-              <div className="g1">
                 <div>
                   <label className="bmcd-lbl">Do the Breakers Enable the Project?<span className="bmcd-req">*</span></label>
                   <select value={form.breakersEnable} onChange={e=>setForm(f=>({...f,breakersEnable:e.target.value}))} className="std-inp">
