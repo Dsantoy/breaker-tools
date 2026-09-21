@@ -142,32 +142,32 @@
   <script type="text/babel">
     const { useState, useEffect, useCallback } = React;
 
-    const MONDAY_API        = "https://api.monday.com/v2";
+    // TODO: replace with your deployed Cloudflare Worker's URL — the SAME
+    // Worker the Request Form uses — no trailing slash.
+    const PROXY_BASE_URL   = "https://REPLACE_WITH_YOUR_WORKER.workers.dev";
+    const PROXY_SHARED_SECRET = "REPLACE_WITH_SHARED_SECRET";
+
     const REQUESTS_BOARD_ID = 18422875681;
     const SUBITEMS_BOARD_ID = 18426331487;
     const SLOT_BOARD_ID     = 18422871700;
-    const SUMMARY_BOARD_ID  = 18426507360;
-    const SUMMARY_ITEM = {
-      "145": { available: 12799154965, reserved: 12799161604 },
-      "245": { available: 12799175418, reserved: 12799161594 },
-      "362": { available: 12799148221, reserved: 12799138949 },
-    };
-    const SUMMARY_COL = { count: "numeric_mm662sje" };
-
-    async function gql(apiKey, query, variables = {}) {
-      const res = await fetch(MONDAY_API, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: apiKey.replace(/[^\x20-\xFF]/g, "").trim() },
-        body: JSON.stringify({ query, variables }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = await res.json();
-      if (json.errors) throw new Error(json.errors[0].message);
-      return json.data;
-    }
 
     function colVal(cvs, id) { return cvs?.find(c=>c.id===id)?.text || ""; }
     function colRaw(cvs, id) { const r=cvs?.find(c=>c.id===id)?.value; try{return r?JSON.parse(r):null;}catch{return null;} }
+
+    async function proxyGet(path) {
+      const res = await fetch(PROXY_BASE_URL + path, { headers:{ "X-Proxy-Secret": PROXY_SHARED_SECRET } });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    }
+    async function proxyPost(path, body) {
+      const res = await fetch(PROXY_BASE_URL + path, {
+        method:"POST",
+        headers:{ "Content-Type":"application/json", "X-Proxy-Secret": PROXY_SHARED_SECRET },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    }
 
     /* BMcD logo mark */
     const LogoMark = ({ size=28 }) => (
@@ -175,7 +175,8 @@
     );
 
     function App() {
-      const [apiKey,      setApiKey]      = useState("");
+      const [reviewerEmail, setReviewerEmail] = useState("");
+      const [loginInput,  setLoginInput]  = useState("");
       const [setupLoad,   setSetupLoad]   = useState(false);
       const [setupErr,    setSetupErr]    = useState("");
       const [screen,      setScreen]      = useState("setup");
@@ -188,118 +189,40 @@
       const [syncing,     setSyncing]     = useState(false);
       const [syncMsg,     setSyncMsg]     = useState("");
 
-      /* ── Connect ── */
+      /* ── Login (allowlist check, no Monday credential involved) ── */
       const handleSetup = async () => {
-        if (!apiKey.trim()) { setSetupErr("API key is required."); return; }
+        const email = loginInput.trim().toLowerCase();
+        if (!email) { setSetupErr("Email is required."); return; }
         setSetupErr(""); setSetupLoad(true);
         try {
-          await gql(apiKey, `{ me { id } }`);
+          const result = await proxyPost("/reviewer-login", { email });
+          if (!result.authorized) {
+            setSetupErr("This email is not on the BSF Review Committee list. Contact the program owner if this is a mistake.");
+            return;
+          }
+          setReviewerEmail(email);
           setScreen("dashboard");
-          loadRequests(apiKey);
+          loadRequests();
         } catch(e) { setSetupErr("Connection failed: "+e.message); }
         finally { setSetupLoad(false); }
       };
 
       /* ── Load requests ── */
-      const loadRequests = useCallback(async (key = apiKey) => {
+      const loadRequests = useCallback(async () => {
         setLoading(true); setLoadErr("");
         try {
-          const boardData = await gql(key, `{
-            boards(ids:[${REQUESTS_BOARD_ID}]) {
-              items_page(limit:100) {
-                items {
-                  id name
-                  column_values(ids:[
-                    "text_mm5es7sz","short_texthrb2ladn","peopleda149l5r",
-                    "short_textfukcenx9","numeric_mm5es9c9","status",
-                    "number8jhwmqe9","single_selectjej2zay","date3z59ugdu",
-                    "text_mm66tjan","board_relation_mm5e11py","formula_mm5s2fxb"
-                  ]) { id text value }
-                }
-              }
-            }
-          }`);
-
-          const allItems = boardData.boards[0].items_page.items;
-          const pending  = allItems.filter(i=>colVal(i.column_values,"status")==="Working on it");
-          const queued   = allItems.filter(i=>colVal(i.column_values,"status")==="In Queue");
-          const history  = allItems.filter(i=>["Done","Stuck"].includes(colVal(i.column_values,"status")));
-
-          const allIds = [];
-          [...pending, ...queued, ...history].forEach(item => {
-            colVal(item.column_values,"text_mm66tjan").split("|").filter(Boolean).forEach(id=>allIds.push(id));
-          });
-          const uniqueIds = [...new Set(allIds)].map(Number).filter(Boolean);
-
-          let subMap = {};
-          if (uniqueIds.length > 0) {
-            const subData = await gql(key, `{ items(ids:[${uniqueIds.join(",")}]) { id name column_values(ids:["status","dropdown_mm65b542","dropdown_mm65c7mt","date_mm65h7tw"]) { id text } parent_item { id name } } }`);
-            subData.items.forEach(si => {
-              const cols = {};
-              si.column_values.forEach(c=>{cols[c.id]=c.text;});
-              subMap[si.id] = { id:si.id, name:si.name, status:cols["status"]||"", voltage:cols["dropdown_mm65b542"]||"", manufacturer:cols["dropdown_mm65c7mt"]||"", deliveryDate:cols["date_mm65h7tw"]||"", parentId:si.parent_item?.id };
-            });
-          }
-
-          const enrich = item => {
-            const cv = item.column_values;
-            const ids = colVal(cv,"text_mm66tjan").split("|").filter(Boolean);
-            const slotRaw    = colRaw(cv,"board_relation_mm5e11py");
-            const slotId     = slotRaw?.linkedPulseIds?.[0]?.linkedPulseId || null;
-            const reqRaw     = colRaw(cv,"peopleda149l5r");
-            const requesterId= reqRaw?.personsAndTeams?.[0]?.id || null;
-            return {
-              id:item.id, name:item.name,
-              projectName:   colVal(cv,"text_mm5es7sz"),
-              clientName:    colVal(cv,"short_texthrb2ladn"),
-              requesterName: colVal(cv,"peopleda149l5r"),
-              requesterId,
-              opportunityNum:colVal(cv,"short_textfukcenx9"),
-              quantityNeeded:parseInt(colVal(cv,"numeric_mm5es9c9")||"0"),
-              status:        colVal(cv,"status"),
-              estimatedValue:colVal(cv,"number8jhwmqe9"),
-              breakersEnable:colVal(cv,"single_selectjej2zay"),
-              dropDeadDate:  colVal(cv,"date3z59ugdu"),
-              capacityCheck: colVal(cv,"formula_mm5s2fxb"),
-              breakerIds: ids,
-              breakers: ids.map(id=>subMap[id]||{ id, name:`Unit ${id}`, status:"Unknown" }),
-              slotId,
-            };
-          };
-
-          setRequests({ pending:pending.map(enrich), queued:queued.map(enrich), history:history.slice(0,8).map(enrich) });
+          const data = await proxyGet("/reviewer-read");
+          setRequests(data);
         } catch(e) { setLoadErr("Failed to load requests: "+e.message); }
         finally { setLoading(false); }
-      }, [apiKey]);
+      }, []);
 
       /* ── Sync counts ── */
       const syncAllCounts = async () => {
         setSyncing(true); setSyncMsg("");
         try {
-          const data = await gql(apiKey, `{ boards(ids:[${SLOT_BOARD_ID}]) { items_page(limit:50) { items { id name subitems { id column_values(ids:["status"]) { id text } } } } } }`);
-          const items = data.boards[0].items_page.items;
-          let updated = 0;
-          for (const item of items) {
-            const reservedCount = (item.subitems||[]).filter(si=>si.column_values?.find(c=>c.id==="status")?.text==="Reserved").length;
-            await gql(apiKey, `mutation($itemId:ID!,$boardId:ID!,$cv:JSON!){ change_multiple_column_values(item_id:$itemId,board_id:$boardId,column_values:$cv){ id } }`,
-              { itemId:String(item.id), boardId:String(SLOT_BOARD_ID), cv:JSON.stringify({ numeric_mm5sw1t1:reservedCount }) });
-            updated++;
-          }
-          const allSubData = await gql(apiKey, `{ boards(ids:[${SUBITEMS_BOARD_ID}]) { items_page(limit:200) { items { column_values(ids:["status","dropdown_mm65b542"]) { id text } } } } }`);
-          const allSubItems = allSubData.boards[0].items_page.items;
-          for (const v of ["145","245","362"]) {
-            const forV  = allSubItems.filter(si=>si.column_values.find(c=>c.id==="dropdown_mm65b542")?.text===v);
-            const avail2= forV.filter(si=>si.column_values.find(c=>c.id==="status")?.text==="Available").length;
-            const resv2 = forV.filter(si=>si.column_values.find(c=>c.id==="status")?.text==="Reserved").length;
-            const sids  = SUMMARY_ITEM[v];
-            if (sids) {
-              await gql(apiKey, `mutation($itemId:ID!,$boardId:ID!,$cv:JSON!){ change_multiple_column_values(item_id:$itemId,board_id:$boardId,column_values:$cv){ id } }`,
-                { itemId:String(sids.available), boardId:String(SUMMARY_BOARD_ID), cv:JSON.stringify({ [SUMMARY_COL.count]:avail2 }) });
-              await gql(apiKey, `mutation($itemId:ID!,$boardId:ID!,$cv:JSON!){ change_multiple_column_values(item_id:$itemId,board_id:$boardId,column_values:$cv){ id } }`,
-                { itemId:String(sids.reserved), boardId:String(SUMMARY_BOARD_ID), cv:JSON.stringify({ [SUMMARY_COL.count]:resv2 }) });
-            }
-          }
-          setSyncMsg(`Synced ${updated} PO lines and capacity summary.`);
+          const result = await proxyPost("/reviewer-sync-counts", { reviewerEmail });
+          setSyncMsg(result.success ? result.message : ("Sync failed: "+result.error));
           setTimeout(()=>setSyncMsg(""), 6000);
         } catch(e) { setSyncMsg("Sync failed: "+e.message); }
         finally { setSyncing(false); }
@@ -308,45 +231,17 @@
       /* ── Approve ── */
       const handleApprove = async req => {
         setActionState(p=>({...p,[req.id]:{working:true,error:null,done:false}}));
-        const errs = [];
         try {
-          for (const breakerId of req.breakerIds) {
-            const bid = parseInt(breakerId);
-            if (!bid) continue;
-            try {
-              const cv = { status:{ label:"Pending Reservation" }, text_mm65z5wm:req.opportunityNum };
-              if (req.requesterId) cv.person = { personsAndTeams:[{ id:parseInt(req.requesterId), kind:"person" }] };
-              await gql(apiKey, `mutation($itemId:ID!,$boardId:ID!,$cv:JSON!){ change_multiple_column_values(item_id:$itemId,board_id:$boardId,column_values:$cv){ id } }`,
-                { itemId:String(bid), boardId:String(SUBITEMS_BOARD_ID), cv:JSON.stringify(cv) });
-            } catch(e) { errs.push(`Unit ${breakerId}: ${e.message}`); }
-          }
-          if (req.slotId) {
-            try {
-              const siData = await gql(apiKey, `{ items(ids:[${req.slotId}]) { subitems { id column_values(ids:["status"]) { id text } } } }`);
-              const allSubs = siData.items?.[0]?.subitems||[];
-              const reservedCount = allSubs.filter(si=>si.column_values?.find(c=>c.id==="status")?.text==="Reserved").length;
-              await gql(apiKey, `mutation($itemId:ID!,$boardId:ID!,$cv:JSON!){ change_multiple_column_values(item_id:$itemId,board_id:$boardId,column_values:$cv){ id } }`,
-                { itemId:String(req.slotId), boardId:String(SLOT_BOARD_ID), cv:JSON.stringify({ numeric_mm5sw1t1:reservedCount }) });
-            } catch(e) { errs.push("Reserved Qty sync: "+e.message); }
-          }
-          try {
-            for (const v of ["145","245","362"]) {
-              const vRowIds = SUMMARY_ITEM[v];
-              if (!vRowIds) continue;
-              const vData = await gql(apiKey, `{ boards(ids:[${SUBITEMS_BOARD_ID}]) { items_page(limit:200) { items { column_values(ids:["status","dropdown_mm65b542"]) { id text } } } } }`);
-              const vItems = vData.boards[0].items_page.items;
-              const forV   = vItems.filter(si=>si.column_values.find(c=>c.id==="dropdown_mm65b542")?.text===v);
-              const avail  = forV.filter(si=>si.column_values.find(c=>c.id==="status")?.text==="Available").length;
-              const resv   = forV.filter(si=>si.column_values.find(c=>c.id==="status")?.text==="Reserved").length;
-              await gql(apiKey, `mutation($itemId:ID!,$boardId:ID!,$cv:JSON!){ change_multiple_column_values(item_id:$itemId,board_id:$boardId,column_values:$cv){ id } }`,
-                { itemId:String(vRowIds.available), boardId:String(SUMMARY_BOARD_ID), cv:JSON.stringify({ [SUMMARY_COL.count]:avail }) });
-              await gql(apiKey, `mutation($itemId:ID!,$boardId:ID!,$cv:JSON!){ change_multiple_column_values(item_id:$itemId,board_id:$boardId,column_values:$cv){ id } }`,
-                { itemId:String(vRowIds.reserved), boardId:String(SUMMARY_BOARD_ID), cv:JSON.stringify({ [SUMMARY_COL.count]:resv }) });
-            }
-          } catch(e) { errs.push("Summary sync: "+e.message); }
-          await gql(apiKey, `mutation($itemId:ID!,$boardId:ID!,$cv:JSON!){ change_multiple_column_values(item_id:$itemId,board_id:$boardId,column_values:$cv){ id } }`,
-            { itemId:String(req.id), boardId:String(REQUESTS_BOARD_ID), cv:JSON.stringify({ status:{ label:"Done" } }) });
-          setActionState(p=>({...p,[req.id]:{ working:false, error:errs.length?errs.join("; "):null, done:true, outcome:"approved" }}));
+          const result = await proxyPost("/reviewer-approve", {
+            reviewerEmail,
+            requestId: req.id,
+            breakerIds: req.breakerIds,
+            opportunityNum: req.opportunityNum,
+            requesterId: req.requesterId,
+            slotId: req.slotId,
+          });
+          if (!result.success) throw new Error(result.error || "Approval failed.");
+          setActionState(p=>({...p,[req.id]:{ working:false, error:result.errors?result.errors.join("; "):null, done:true, outcome:"approved" }}));
           setTimeout(()=>loadRequests(), 1800);
         } catch(e) {
           setActionState(p=>({...p,[req.id]:{ working:false, error:"Approval failed: "+e.message, done:false }}));
@@ -358,12 +253,8 @@
         setDenyTarget(null); setDenyReason("");
         setActionState(p=>({...p,[req.id]:{working:true,error:null,done:false}}));
         try {
-          await gql(apiKey, `mutation($itemId:ID!,$boardId:ID!,$cv:JSON!){ change_multiple_column_values(item_id:$itemId,board_id:$boardId,column_values:$cv){ id } }`,
-            { itemId:String(req.id), boardId:String(REQUESTS_BOARD_ID), cv:JSON.stringify({ status:{ label:"Stuck" } }) });
-          if (reason.trim()) {
-            await gql(apiKey, `mutation($itemId:ID!,$body:String!){ create_update(item_id:$itemId,body:$body){ id } }`,
-              { itemId:parseInt(req.id), body:"Request denied.\n\nReason: "+reason });
-          }
+          const result = await proxyPost("/reviewer-deny", { reviewerEmail, requestId: req.id, reason });
+          if (!result.success) throw new Error(result.error || "Denial failed.");
           setActionState(p=>({...p,[req.id]:{ working:false, error:null, done:true, outcome:"denied" }}));
           setTimeout(()=>loadRequests(), 1800);
         } catch(e) {
@@ -376,33 +267,21 @@
 
       const handleMarkReserved = async (req) => {
         setMarkReservedState(p=>({...p,[req.id]:{working:true,error:null,done:false}}));
-        const errs = [];
         try {
-          for (const breakerId of req.breakerIds) {
-            const bid = parseInt(breakerId);
-            if (!bid) continue;
-            try {
-              await gql(apiKey, `mutation($itemId:ID!,$boardId:ID!,$cv:JSON!){ change_multiple_column_values(item_id:$itemId,board_id:$boardId,column_values:$cv){ id } }`,
-                { itemId:String(bid), boardId:String(SUBITEMS_BOARD_ID), cv:JSON.stringify({ status:{ label:"Reserved" } }) });
-            } catch(e) { errs.push("Unit "+breakerId+": "+e.message); }
-          }
-          if (req.slotId) {
-            try {
-              const siData = await gql(apiKey, "{items(ids:["+req.slotId+"]){subitems{id column_values(ids:[\"status\"]){id text}}}}");
-              const allSubs = siData.items?.[0]?.subitems||[];
-              const reservedCount = allSubs.filter(si=>si.column_values?.find(c=>c.id==="status")?.text==="Reserved").length;
-              await gql(apiKey, "mutation($itemId:ID!,$boardId:ID!,$cv:JSON!){ change_multiple_column_values(item_id:$itemId,board_id:$boardId,column_values:$cv){ id } }",
-                { itemId:String(req.slotId), boardId:String(SLOT_BOARD_ID), cv:JSON.stringify({ numeric_mm5sw1t1:reservedCount }) });
-            } catch(e) { errs.push("Reserved Qty: "+e.message); }
-          }
-          setMarkReservedState(p=>({...p,[req.id]:{ working:false, error:errs.length?errs.join("; "):null, done:true }}));
+          const result = await proxyPost("/reviewer-mark-reserved", {
+            reviewerEmail,
+            breakerIds: req.breakerIds,
+            slotId: req.slotId,
+          });
+          if (!result.success) throw new Error(result.error || "Failed.");
+          setMarkReservedState(p=>({...p,[req.id]:{ working:false, error:result.errors?result.errors.join("; "):null, done:true }}));
           setTimeout(()=>loadRequests(), 1800);
         } catch(e) {
           setMarkReservedState(p=>({...p,[req.id]:{ working:false, error:"Failed: "+e.message, done:false }}));
         }
       };
 
-      /* ── SETUP SCREEN ── */
+      /* ── SETUP / LOGIN SCREEN ── */
       if (screen==="setup") return (
         <div className="setup-wrap">
           <div className="setup-box">
@@ -417,16 +296,16 @@
             </div>
             <div className="setup-divider"/>
             <p style={{ color:"#4D6680", fontSize:13, marginBottom:22, lineHeight:1.6 }}>
-              Reviewer-only tool. Approving a request automatically marks all selected breaker units as Reserved in Monday.com, updates the slot Reserved Qty, and writes the opportunity number to each unit.
+              Reviewer-only tool, restricted to the BSF Review Committee. Approving a request automatically marks all selected breaker units as Reserved in Monday.com, updates the slot Reserved Qty, and writes the opportunity number to each unit.
             </p>
-            <label className="bmcd-lbl">Monday.com API Key <span style={{ color:"#DC2626" }}>*</span></label>
-            <input type="password" value={apiKey} onChange={e=>setApiKey(e.target.value)}
+            <label className="bmcd-lbl">Your Email <span style={{ color:"#DC2626" }}>*</span></label>
+            <input type="email" value={loginInput} onChange={e=>setLoginInput(e.target.value)}
               onKeyDown={e=>e.key==="Enter"&&handleSetup()}
-              placeholder="eyJhbGciOiJIUzI1Ni..." className="setup-inp"/>
-            <div className="setup-hint">Profile → Developers → My Access Tokens</div>
+              placeholder="you@burnsmcd.com" className="setup-inp"/>
+            <div className="setup-hint">Restricted to BSF Review Committee members.</div>
             {setupErr && <div className="err-box">{setupErr}</div>}
             <button onClick={handleSetup} disabled={setupLoad} className="setup-btn">
-              {setupLoad ? "Connecting…" : "Open Review Dashboard →"}
+              {setupLoad ? "Checking…" : "Open Review Dashboard →"}
             </button>
           </div>
         </div>
@@ -434,7 +313,6 @@
 
       /* ── DASHBOARD ── */
       const { pending=[], queued=[], history=[] } = requests;
-      const totalReserved = history.filter(r=>r.status==="Done").length;
 
       return (
         <div style={{ minHeight:"100vh", background:"#E2E8F0", paddingBottom:40 }}>
@@ -445,7 +323,7 @@
               <div className="bmcd-logo-wrap"><LogoMark/></div>
               <div>
                 <div className="bmcd-title">BSF Review Dashboard</div>
-                <div className="bmcd-title-sub">BURNS &amp; McDONNELL &nbsp;·&nbsp; HV CIRCUIT BREAKER SLOT PROGRAM</div>
+                <div className="bmcd-title-sub">BURNS &amp; McDONNELL &nbsp;·&nbsp; HV CIRCUIT BREAKER SLOT PROGRAM &nbsp;·&nbsp; {reviewerEmail}</div>
               </div>
             </div>
             <div className="bmcd-header-right">
