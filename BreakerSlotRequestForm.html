@@ -157,12 +157,15 @@
       const [poLines,         setPoLines]         = useState([]);
       const [subitemsByLine,  setSubitemsByLine]   = useState({});
 
-      const [selectedPoLineId, setSelectedPoLineId] = useState("");
+      // Multiple PO lines can be added; selectedIds holds units across ALL added lines.
+      const [addedLineIds,     setAddedLineIds]      = useState([]);
+      const [pickerValue,      setPickerValue]       = useState("");
       const [selectedIds,      setSelectedIds]       = useState([]);
+      const [submittedSummary, setSubmittedSummary]  = useState({ lines:"", count:0 });
 
       const [form, setForm] = useState({
         projectName:"", clientName:"", requesterName:"", requesterEmail:"",
-        opportunityNumber:"", estimatedValue:"", breakersEnable:"", dropDeadDate:"",
+        opportunityNumber:"", estimatedValue:"", breakersEnable:"", dropDeadDate:"", notes:"",
       });
       const [submitting,  setSubmitting]  = useState(false);
       const [submitErr,   setSubmitErr]   = useState("");
@@ -210,17 +213,27 @@
       useEffect(() => { loadData(); }, []);
 
       /* ── Derived state from selected line ── */
-      const lineSubitems    = subitemsByLine[selectedPoLineId] || [];
-      const selectable      = lineSubitems.filter(s=>!LOCKED_STATUSES.includes(s.status));
-      const locked          = lineSubitems.filter(s=>LOCKED_STATUSES.includes(s.status));
-      const selectedLine    = poLines.find(l=>l.id===selectedPoLineId);
-      const hasQueueItems   = selectedIds.some(id=>QUEUE_STATUSES.includes(selectable.find(s=>s.id===id)?.status||""));
+      const addedLines      = addedLineIds.map(id=>poLines.find(l=>l.id===id)).filter(Boolean);
+      const allSubitems     = addedLineIds.flatMap(id=>subitemsByLine[id]||[]);
+      const hasQueueItems   = selectedIds.some(id=>QUEUE_STATUSES.includes(allSubitems.find(s=>s.id===id)?.status||""));
       const toggle = id => setSelectedIds(p=>p.includes(id)?p.filter(x=>x!==id):[...p,id]);
+      const addLine = id => { if (id && !addedLineIds.includes(id)) setAddedLineIds(p=>[...p,id]); setPickerValue(""); };
+      const removeLine = id => {
+        setAddedLineIds(p=>p.filter(x=>x!==id));
+        const drop = new Set((subitemsByLine[id]||[]).map(s=>s.id));
+        setSelectedIds(p=>p.filter(x=>!drop.has(x)));
+      };
+      const selectAllIn = ids => setSelectedIds(p=>[...new Set([...p,...ids])]);
+      const clearIn     = ids => setSelectedIds(p=>p.filter(x=>!ids.includes(x)));
+      // Lines that actually have selected units (what gets submitted)
+      const linesWithSelection = addedLines.filter(l=>(subitemsByLine[l.id]||[]).some(s=>selectedIds.includes(s.id)));
+      const lineSummary = linesWithSelection.map(l=>l.name).join(", ");
+      const lineOptionLabel = l => `Line ${String(l.poLineNum).padStart(2,"0")} — ${l.voltage}kV ${l.manufacturer} — Delivery ${l.deliveryDate} — ${l.selectableCount} of ${l.totalCount} selectable`;
 
       const isValid = form.projectName.trim()&&form.clientName.trim()&&
         form.requesterName.trim()&&isValidEmail(form.requesterEmail)&&
         form.opportunityNumber.trim()&&form.estimatedValue&&form.breakersEnable&&
-        form.dropDeadDate&&selectedPoLineId&&selectedIds.length>0;
+        form.dropDeadDate&&selectedIds.length>0;
 
       /* ── Submit — everything (identity lookup, live collision check, item
          creation, subitem status updates) happens server-side in the proxy.
@@ -238,8 +251,16 @@
             estimatedValue:     parseFloat(form.estimatedValue)||0,
             breakersEnable:     form.breakersEnable,
             dropDeadDate:       form.dropDeadDate,
-            poLineId:           selectedPoLineId,
+            // Backward compat: poLineId = first line with a selection.
+            poLineId:           linesWithSelection[0]?.id || "",
+            poLineIds:          linesWithSelection.map(l=>l.id),
             selectedIds:        selectedIds,
+            // Units grouped by PO line
+            selections:         linesWithSelection.map(l=>({
+              poLineId:l.id, poLineName:l.name,
+              selectedIds:(subitemsByLine[l.id]||[]).filter(s=>selectedIds.includes(s.id)).map(s=>s.id),
+            })),
+            notes:              form.notes.trim(),
           };
           const res = await fetch(PROXY_SUBMIT_URL, {
             method:"POST", headers:{"Content-Type":"application/json", "X-Proxy-Secret": PROXY_SHARED_SECRET}, body:JSON.stringify(payload),
@@ -252,15 +273,16 @@
           // (ids that were already queue-status are left untouched, same as before)
           setSubitemsByLine(prev => {
             const updated = { ...prev };
-            if (updated[selectedPoLineId]) {
-              const flipped = new Set(result.updatedIds || []);
-              updated[selectedPoLineId] = updated[selectedPoLineId].map(s =>
+            const flipped = new Set(result.updatedIds || []);
+            Object.keys(updated).forEach(lid => {
+              updated[lid] = updated[lid].map(s =>
                 flipped.has(s.id) ? { ...s, status:"Pending Review" } : s
               );
-            }
+            });
             return updated;
           });
 
+          setSubmittedSummary({ lines:lineSummary, count:selectedIds.length });
           setWasQueued(!!result.wasQueued);
           setCreatedItem({ url: result.itemUrl });
           setScreen("success");
@@ -269,8 +291,8 @@
       };
 
       const reset = () => {
-        setForm({ projectName:"", clientName:"", requesterName:"", requesterEmail:"", opportunityNumber:"", estimatedValue:"", breakersEnable:"", dropDeadDate:"" });
-        setSelectedPoLineId(""); setSelectedIds([]); setSubmitErr(""); setCreatedItem(null); setWasQueued(false);
+        setForm({ projectName:"", clientName:"", requesterName:"", requesterEmail:"", opportunityNumber:"", estimatedValue:"", breakersEnable:"", dropDeadDate:"", notes:"" });
+        setAddedLineIds([]); setPickerValue(""); setSelectedIds([]); setSubmitErr(""); setCreatedItem(null); setWasQueued(false);
       };
 
       const VOLT_GROUPS = [
@@ -332,11 +354,12 @@
                 ["Project",          form.projectName],
                 ["Client",           form.clientName],
                 ["Opportunity #",    form.opportunityNumber],
-                ["PO Line",          selectedLine?.name||"—"],
-                ["Breakers Selected",`${selectedIds.length} unit${selectedIds.length!==1?"s":""}`],
+                ["PO Line(s)",       submittedSummary.lines||"—"],
+                ["Breakers Selected",`${submittedSummary.count} unit${submittedSummary.count!==1?"s":""}`],
+                ...(form.notes.trim() ? [["Notes", form.notes.trim()]] : []),
                 ["Requester",        form.requesterName ? `${form.requesterName} (${form.requesterEmail})` : "—"],
               ].map(([k,v])=>(
-                <div key={k} style={{ display:"flex", justifyContent:"space-between", fontSize:12, color:"#334155", marginBottom:5, gap:12 }}>
+                <div key={k} style={{ display:"flex", justifyContent:"space-between", fontSize:12, color:"#334155", marginBottom:5, gap:12, whiteSpace:"pre-wrap" }}>
                   <span style={{ color:"#94A3B8" }}>{k}</span>
                   <span style={{ fontWeight:600 }}>{v}</span>
                 </div>
@@ -378,14 +401,19 @@
 
           {/* Steps */}
           <div className="bmcd-steps">
-            <div className={`bmcd-step ${!selectedPoLineId?"active":"inactive"}`}>
+            <div className={`bmcd-step ${!selectedIds.length?"active":"inactive"}`}>
               <div className="bmcd-step-num">1</div>
               <div className="bmcd-step-lbl">Project Details</div>
             </div>
             <div className="bmcd-step-div"/>
-            <div className={`bmcd-step ${selectedPoLineId?"active":"inactive"}`}>
+            <div className={`bmcd-step ${selectedIds.length?"active":"inactive"}`}>
               <div className="bmcd-step-num">2</div>
               <div className="bmcd-step-lbl">Breaker Selection</div>
+            </div>
+            <div className="bmcd-step-div"/>
+            <div className="bmcd-step inactive">
+              <div className="bmcd-step-num">3</div>
+              <div className="bmcd-step-lbl">Notes</div>
             </div>
           </div>
 
@@ -464,7 +492,7 @@
                 </div>
                 <div>
                   <div className="bmcd-card-title">Breaker Selection</div>
-                  <div className="bmcd-card-sub">Choose a delivery slot then select specific units — queue positions available for pending breakers</div>
+                  <div className="bmcd-card-sub">Add one or more delivery slots, then select units from each — queue positions available for pending breakers</div>
                 </div>
                 <span className="bmcd-step-tag">STEP 02</span>
               </div>
@@ -479,121 +507,160 @@
                 ))}
               </div>
 
-              {/* Dropdown */}
-              <label className="bmcd-lbl" style={{ marginBottom:6 }}>Delivery Slot / PO Line<span className="bmcd-req">*</span></label>
-              <select value={selectedPoLineId} onChange={e=>{setSelectedPoLineId(e.target.value);setSelectedIds([]);}}
+              {/* Add-a-line picker */}
+              <label className="bmcd-lbl" style={{ marginBottom:6 }}>Add a Delivery Slot / PO Line<span className="bmcd-req">*</span></label>
+              <select value={pickerValue} onChange={e=>addLine(e.target.value)}
                 className="std-inp" style={{ fontFamily:"monospace", fontSize:12, marginBottom:4 }}>
-                <option value="">Choose a delivery slot…</option>
+                <option value="">{addedLineIds.length ? "Add another delivery slot…" : "Choose a delivery slot…"}</option>
                 {VOLT_GROUPS.map(({label,key})=>{
-                  const lines = poLines.filter(l=>String(l.voltage).trim()===key);
+                  const lines = poLines.filter(l=>String(l.voltage).trim()===key && !addedLineIds.includes(l.id));
                   if (!lines.length) return null;
                   return (
                     <optgroup key={key} label={label}>
-                      {lines.map(l=>(
-                        <option key={l.id} value={l.id}>
-                          {`Line ${String(l.poLineNum).padStart(2,"0")} — ${l.voltage}kV ${l.manufacturer} — Delivery ${l.deliveryDate} — ${l.selectableCount} of ${l.totalCount} selectable`}
-                        </option>
-                      ))}
+                      {lines.map(l=>(<option key={l.id} value={l.id}>{lineOptionLabel(l)}</option>))}
                     </optgroup>
                   );
                 })}
-                {poLines.filter(l=>!["145","245","362"].includes(String(l.voltage).trim())).map(l=>(
-                  <option key={l.id} value={l.id}>
-                    {`Line ${String(l.poLineNum).padStart(2,"0")} — ${l.voltage}kV ${l.manufacturer} — Delivery ${l.deliveryDate} — ${l.selectableCount} of ${l.totalCount} selectable`}
-                  </option>
+                {poLines.filter(l=>!["145","245","362"].includes(String(l.voltage).trim()) && !addedLineIds.includes(l.id)).map(l=>(
+                  <option key={l.id} value={l.id}>{lineOptionLabel(l)}</option>
                 ))}
               </select>
+              <div style={{ fontSize:11, color:"#94A3B8", marginBottom:4 }}>You can add several PO lines and select units from each. Selections are kept when you add or collapse lines.</div>
 
-              {selectedPoLineId && (
+              {addedLines.length>0 && (
                 <div style={{ marginTop:14 }}>
-                  {/* Capacity bar */}
-                  <div className="cap-wrap">
-                    <div className="cap-row">
-                      <span>{selectedLine?.name} — Slot Availability</span>
-                      <span style={{ color:"#1A9B5A", fontWeight:700 }}>{selectable.length} of {lineSubitems.length} selectable</span>
-                    </div>
-                    <div className="cap-track">
-                      <div className="cap-fill" style={{ width:`${lineSubitems.length>0?Math.round((selectable.length/lineSubitems.length)*100):0}%`, background:"linear-gradient(90deg,#0049CD,#0066FF)" }}/>
-                    </div>
-                  </div>
-
-                  {/* Banner */}
+                  {/* Overall banner */}
                   {(()=>{
                     let bg,bc,color,msg;
-                    if (selectable.length===0){bg="#FEF2F2";bc="#FECACA";color="#DC2626";msg="No selectable breakers on this line. All units are Reserved or Delivered.";}
-                    else if (selectedIds.length===0){bg="#FFFBEB";bc="#FDE68A";color="#D97706";msg=`${selectable.length} selectable unit${selectable.length!==1?"s":""} available — green units are open, amber/blue units have pending requests but can be queued.`;}
-                    else{bg="#E6F9EE";bc="#6DD19A";color="#1A9B5A";msg=`${selectedIds.length} unit${selectedIds.length!==1?"s":""} selected.${hasQueueItems?" Some are in queue — you will be placed in line for committee review.":""}`;}
+                    if (selectedIds.length===0){bg="#FFFBEB";bc="#FDE68A";color="#D97706";msg="Select the units you need from the line(s) below — green units are open, amber/blue units have pending requests but can be queued.";}
+                    else{bg="#E6F9EE";bc="#6DD19A";color="#1A9B5A";msg=`${selectedIds.length} unit${selectedIds.length!==1?"s":""} selected across ${linesWithSelection.length} PO line${linesWithSelection.length!==1?"s":""}.${hasQueueItems?" Some are in queue — you will be placed in line for committee review.":""}`;}
                     return <div style={{ background:bg, border:`1px solid ${bc}`, borderRadius:8, padding:"9px 14px", marginBottom:12, fontSize:12, color, fontWeight:500 }}>{msg}</div>;
                   })()}
 
-                  {/* Queue notice */}
                   {hasQueueItems && (
                     <div className="queue-notice">
                       <strong>Queue Notice:</strong> One or more of your selected breakers already has a pending request. Submitting will place you in the Monday.com queue. If the original request falls through, the committee will allocate these breakers to the next in line automatically.
                     </div>
                   )}
 
-                  {/* Selectable breakers */}
-                  {selectable.length > 0 && (
-                    <div style={{ border:"1px solid #D4DCE6", borderRadius:8, overflow:"hidden", marginBottom:8 }}>
-                      <div style={{ background:"#F0F4F8", padding:"7px 14px", fontSize:9, fontWeight:700, color:"#4D6680", letterSpacing:".1em", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-                        <span>SELECTABLE UNITS — SELECT ALL YOU NEED</span>
-                        <span style={{ fontWeight:400, color:"#94A3B8" }}>{selectedIds.length}/{selectable.length} selected</span>
-                      </div>
-                      {selectable.length > 1 && (
-                        <div style={{ padding:"7px 14px", borderBottom:"1px solid #D4DCE6", display:"flex", gap:12, background:"#fff" }}>
-                          <button onClick={()=>setSelectedIds(selectable.map(s=>s.id))} style={{ fontSize:11, color:"#0049CD", background:"none", border:"none", cursor:"pointer", padding:0, fontWeight:600 }}>Select all {selectable.length}</button>
-                          <span style={{ color:"#D4DCE6" }}>|</span>
-                          <button onClick={()=>setSelectedIds([])} style={{ fontSize:11, color:"#94A3B8", background:"none", border:"none", cursor:"pointer", padding:0 }}>Clear</button>
+                  {addedLines.map(line=>{
+                    const lineSubs   = subitemsByLine[line.id] || [];
+                    const selectable = lineSubs.filter(s=>!LOCKED_STATUSES.includes(s.status));
+                    const locked     = lineSubs.filter(s=>LOCKED_STATUSES.includes(s.status));
+                    const selIds     = selectable.map(s=>s.id);
+                    const lineSelCount = selIds.filter(id=>selectedIds.includes(id)).length;
+                    return (
+                      <div key={line.id} style={{ border:"1.5px solid #B4C4D4", borderRadius:10, padding:12, marginBottom:14, background:"#FCFDFE" }}>
+                        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, marginBottom:6 }}>
+                          <div style={{ fontSize:13, fontWeight:700, color:"#002D59" }}>
+                            {line.name}
+                            <span style={{ fontWeight:400, color:"#94A3B8", fontSize:11, marginLeft:8 }}>
+                              {[line.voltage&&`${line.voltage}kV`, line.manufacturer, line.deliveryDate&&`Delivery ${line.deliveryDate}`].filter(Boolean).join(" · ")}
+                            </span>
+                          </div>
+                          <button type="button" onClick={()=>removeLine(line.id)} title="Remove this PO line (clears its selections)"
+                            style={{ fontSize:11, color:"#DC2626", background:"none", border:"1px solid #FECACA", borderRadius:6, padding:"3px 9px", cursor:"pointer", fontWeight:600, flexShrink:0 }}>
+                            Remove line
+                          </button>
                         </div>
-                      )}
-                      {selectable.map(b=>{
-                        const checked = selectedIds.includes(b.id);
-                        const ss = statusStyle(b.status);
-                        return (
-                          <label key={b.id} className={biClass(b.status, checked)} style={{ display:"flex" }}>
-                            <div className={cboxClass(b.status, checked)}>
-                              {checked && <span style={{ color:"#fff", fontSize:11, fontWeight:700 }}>✓</span>}
-                            </div>
-                            <input type="checkbox" checked={checked} onChange={()=>toggle(b.id)} style={{ display:"none" }}/>
-                            <div style={{ flex:1 }}>
-                              <div style={{ fontWeight:600, color:"#002D59", fontSize:13 }}>{b.name}</div>
-                              <div style={{ fontSize:11, color:"#94A3B8", marginTop:1 }}>
-                                {[b.voltage&&`${b.voltage}kV`, b.manufacturer, b.deliveryDate&&`Delivery: ${b.deliveryDate}`].filter(Boolean).join(" · ")}
-                              </div>
-                            </div>
-                            <span style={{ fontSize:10, fontWeight:700, color:ss.color, background:ss.bg, padding:"2px 8px", borderRadius:20, flexShrink:0, alignSelf:"center" }}>{ss.label}</span>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  )}
 
-                  {/* Locked (not selectable) */}
-                  {locked.length > 0 && (
-                    <details style={{ marginTop:8 }}>
-                      <summary style={{ fontSize:11, color:"#94A3B8", cursor:"pointer", padding:"3px 0" }}>
-                        {locked.length} locked unit{locked.length!==1?"s":""} on this line (Reserved or Delivered — not selectable)
-                      </summary>
-                      <div style={{ border:"1px solid #D4DCE6", borderRadius:8, marginTop:6, overflow:"hidden", opacity:.5 }}>
-                        {locked.map((b,i)=>{
-                          const ss = statusStyle(b.status);
-                          return (
-                            <div key={b.id} style={{ display:"flex", alignItems:"center", gap:11, padding:"10px 14px", borderBottom:i<locked.length-1?"1px solid #E8EDF4":"none" }}>
-                              <div style={{ width:18, flexShrink:0 }}/>
-                              <div style={{ flex:1 }}>
-                                <div style={{ fontWeight:500, color:"#94A3B8", fontSize:12 }}>{b.name}</div>
-                                <div style={{ fontSize:11, color:"#B4C4D4" }}>{[b.voltage&&`${b.voltage}kV`,b.manufacturer].filter(Boolean).join(" · ")}</div>
-                              </div>
-                              <span style={{ fontSize:10, fontWeight:700, color:ss.color, background:ss.bg, padding:"2px 8px", borderRadius:20 }}>{ss.label}</span>
+                        <div className="cap-wrap">
+                          <div className="cap-row">
+                            <span>Slot Availability</span>
+                            <span style={{ color:"#1A9B5A", fontWeight:700 }}>{selectable.length} of {lineSubs.length} selectable · {lineSelCount} selected</span>
+                          </div>
+                          <div className="cap-track">
+                            <div className="cap-fill" style={{ width:`${lineSubs.length>0?Math.round((selectable.length/lineSubs.length)*100):0}%`, background:"linear-gradient(90deg,#0049CD,#0066FF)" }}/>
+                          </div>
+                        </div>
+
+                        {selectable.length===0 && (
+                          <div style={{ background:"#FEF2F2", border:"1px solid #FECACA", borderRadius:8, padding:"9px 14px", marginBottom:8, fontSize:12, color:"#DC2626", fontWeight:500 }}>
+                            No selectable breakers on this line. All units are Reserved or Delivered.
+                          </div>
+                        )}
+
+                        {selectable.length > 0 && (
+                          <div style={{ border:"1px solid #D4DCE6", borderRadius:8, overflow:"hidden", marginBottom:8, background:"#fff" }}>
+                            <div style={{ background:"#F0F4F8", padding:"7px 14px", fontSize:9, fontWeight:700, color:"#4D6680", letterSpacing:".1em", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                              <span>SELECTABLE UNITS — SELECT ALL YOU NEED</span>
+                              <span style={{ fontWeight:400, color:"#94A3B8" }}>{lineSelCount}/{selectable.length} selected</span>
                             </div>
-                          );
-                        })}
+                            {selectable.length > 1 && (
+                              <div style={{ padding:"7px 14px", borderBottom:"1px solid #D4DCE6", display:"flex", gap:12, background:"#fff" }}>
+                                <button type="button" onClick={()=>selectAllIn(selIds)} style={{ fontSize:11, color:"#0049CD", background:"none", border:"none", cursor:"pointer", padding:0, fontWeight:600 }}>Select all {selectable.length}</button>
+                                <span style={{ color:"#D4DCE6" }}>|</span>
+                                <button type="button" onClick={()=>clearIn(selIds)} style={{ fontSize:11, color:"#94A3B8", background:"none", border:"none", cursor:"pointer", padding:0 }}>Clear</button>
+                              </div>
+                            )}
+                            {selectable.map(b=>{
+                              const checked = selectedIds.includes(b.id);
+                              const ss = statusStyle(b.status);
+                              return (
+                                <label key={b.id} className={biClass(b.status, checked)} style={{ display:"flex" }}>
+                                  <div className={cboxClass(b.status, checked)}>
+                                    {checked && <span style={{ color:"#fff", fontSize:11, fontWeight:700 }}>✓</span>}
+                                  </div>
+                                  <input type="checkbox" checked={checked} onChange={()=>toggle(b.id)} style={{ display:"none" }}/>
+                                  <div style={{ flex:1 }}>
+                                    <div style={{ fontWeight:600, color:"#002D59", fontSize:13 }}>{b.name}</div>
+                                    <div style={{ fontSize:11, color:"#94A3B8", marginTop:1 }}>
+                                      {[b.voltage&&`${b.voltage}kV`, b.manufacturer, b.deliveryDate&&`Delivery: ${b.deliveryDate}`].filter(Boolean).join(" · ")}
+                                    </div>
+                                  </div>
+                                  <span style={{ fontSize:10, fontWeight:700, color:ss.color, background:ss.bg, padding:"2px 8px", borderRadius:20, flexShrink:0, alignSelf:"center" }}>{ss.label}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {locked.length > 0 && (
+                          <details style={{ marginTop:8 }}>
+                            <summary style={{ fontSize:11, color:"#94A3B8", cursor:"pointer", padding:"3px 0" }}>
+                              {locked.length} locked unit{locked.length!==1?"s":""} on this line (Reserved or Delivered — not selectable)
+                            </summary>
+                            <div style={{ border:"1px solid #D4DCE6", borderRadius:8, marginTop:6, overflow:"hidden", opacity:.5 }}>
+                              {locked.map((b,i)=>{
+                                const ss = statusStyle(b.status);
+                                return (
+                                  <div key={b.id} style={{ display:"flex", alignItems:"center", gap:11, padding:"10px 14px", borderBottom:i<locked.length-1?"1px solid #E8EDF4":"none" }}>
+                                    <div style={{ width:18, flexShrink:0 }}/>
+                                    <div style={{ flex:1 }}>
+                                      <div style={{ fontWeight:500, color:"#94A3B8", fontSize:12 }}>{b.name}</div>
+                                      <div style={{ fontSize:11, color:"#B4C4D4" }}>{[b.voltage&&`${b.voltage}kV`,b.manufacturer].filter(Boolean).join(" · ")}</div>
+                                    </div>
+                                    <span style={{ fontSize:10, fontWeight:700, color:ss.color, background:ss.bg, padding:"2px 8px", borderRadius:20 }}>{ss.label}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </details>
+                        )}
                       </div>
-                    </details>
-                  )}
+                    );
+                  })}
                 </div>
               )}
+            </div>
+
+            {/* Section C — Notes */}
+            <div className="bmcd-card">
+              <div className="bmcd-card-hdr">
+                <div className="bmcd-card-icon">
+                  <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path d="M4 5h16M4 10h16M4 15h10" stroke="#0049CD" strokeWidth="1.8" strokeLinecap="round"/></svg>
+                </div>
+                <div>
+                  <div className="bmcd-card-title">Notes for the Review Committee</div>
+                  <div className="bmcd-card-sub">Optional — add context that will help the committee evaluate your request</div>
+                </div>
+                <span className="bmcd-step-tag">STEP 03</span>
+              </div>
+              <label className="bmcd-lbl">Additional Comments / Notes</label>
+              <textarea value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} className="std-inp" rows={5} maxLength={2000}
+                style={{ resize:"vertical", lineHeight:1.5 }}
+                placeholder="e.g. Why these particular slots, schedule drivers, customer commitments, flexibility on delivery dates, how units are split across projects…"/>
+              <div style={{ textAlign:"right", fontSize:10, color:"#94A3B8", marginTop:4 }}>{form.notes.length}/2000</div>
             </div>
 
             {/* Submit */}
@@ -601,7 +668,7 @@
               {submitErr && <div className="err-box" style={{ marginBottom:14 }}>{submitErr}</div>}
               <div className="submit-inner">
                 <div className="submit-text">
-                  <strong>Ready to submit.</strong> Your request for {selectedIds.length||"your"} breaker unit{selectedIds.length!==1?"s":""}{selectedLine?` on ${selectedLine.name}`:""} will be routed to the BSF Review Committee for review. Please check your email for submission details and next steps.
+                  <strong>Ready to submit.</strong> Your request for {selectedIds.length||"your"} breaker unit{selectedIds.length!==1?"s":""}{linesWithSelection.length?` across ${linesWithSelection.length} PO line${linesWithSelection.length!==1?"s":""} (${lineSummary})`:""} will be routed to the BSF Review Committee for review. Please check your email for submission details and next steps.
                 </div>
                 <button onClick={handleSubmit} disabled={!isValid||submitting}
                   className={isValid&&!submitting?"submit-btn-active":"submit-btn-dis"}>
