@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Slot Reservation Request Form — Burns &amp; McDonnell</title>
+  <title>BSF Review Dashboard — Burns &amp; McDonnell</title>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -11,298 +11,278 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { background: #E2E8F0; font-family: system-ui, -apple-system, sans-serif; }
     select, input, textarea, button { font-family: inherit; }
-    .bmcd-header { background: #002D59; position: relative; overflow: hidden; padding: 28px 36px 40px; }
+
+    /* Header */
+    .bmcd-header { background: #002D59; position: relative; overflow: hidden; padding: 20px 36px; display: flex; align-items: center; justify-content: space-between; }
     .bmcd-header::before { content:''; position:absolute; top:0;left:0;right:0;bottom:0;
-      background-image: repeating-linear-gradient(-55deg,transparent,transparent 18px,rgba(0,73,205,0.35) 18px,rgba(0,73,205,0.35) 22px); pointer-events:none; }
-    .bmcd-header-inner { position:relative; z-index:1; }
-    .bmcd-logo-row { display:flex; align-items:center; gap:14px; margin-bottom:26px; }
-    .bmcd-logo-wordmark .brand { font-size:16px; font-weight:800; letter-spacing:.05em; color:#fff; display:block; line-height:1.1; }
-    .bmcd-logo-wordmark .est { font-size:9px; letter-spacing:.18em; color:rgba(255,255,255,.55); font-weight:400; margin-top:3px; display:block; }
-    .bmcd-eyebrow { font-size:10px; font-weight:700; letter-spacing:.14em; color:#E6F001; text-transform:uppercase; margin-bottom:10px; }
-    .bmcd-hero-title { font-size:28px; font-weight:800; color:#fff; line-height:1.18; margin-bottom:4px; }
-    .bmcd-hero-title span { color:#E6F001; }
-    .bmcd-neon-bar { width:44px; height:4px; background:#E6F001; margin:12px 0 10px; border-radius:2px; }
-    .bmcd-hero-sub { font-size:12px; color:rgba(255,255,255,.62); max-width:520px; line-height:1.55; }
-    .bmcd-steps { background:#0049CD; padding:0 36px; display:flex; align-items:center; }
-    .bmcd-step { display:flex; align-items:center; gap:9px; padding:13px 0; padding-right:28px; position:relative; }
-    .bmcd-step.active::after { content:''; position:absolute; bottom:0; left:0; right:0; height:3px; background:#E6F001; border-radius:2px 2px 0 0; }
-    .bmcd-step-num { width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; flex-shrink:0; }
-    .bmcd-step.active .bmcd-step-num { background:#E6F001; color:#002D59; }
-    .bmcd-step.inactive .bmcd-step-num { background:rgba(255,255,255,.2); color:rgba(255,255,255,.55); }
-    .bmcd-step-lbl { font-size:11px; font-weight:600; }
-    .bmcd-step.active .bmcd-step-lbl { color:#fff; }
-    .bmcd-step.inactive .bmcd-step-lbl { color:rgba(255,255,255,.45); }
-    .bmcd-step-div { width:20px; height:1px; background:rgba(255,255,255,.25); margin-right:14px; }
-    .bmcd-card { background:#fff; border-radius:12px; padding:22px 26px; border:1px solid #D4DCE6; box-shadow:0 2px 14px rgba(0,45,89,.07); margin-bottom:18px; }
-    .bmcd-card-hdr { display:flex; align-items:center; gap:12px; margin-bottom:20px; padding-bottom:14px; border-bottom:1px solid #E8EDF4; }
-    .bmcd-card-icon { width:36px; height:36px; border-radius:8px; background:#EEF3FC; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-    .bmcd-card-title { font-size:14px; font-weight:700; color:#002D59; }
-    .bmcd-card-sub { font-size:11px; color:#A1AFB3; margin-top:1px; }
-    .bmcd-step-tag { font-size:9px; font-weight:700; letter-spacing:.1em; color:#0049CD; background:#EEF3FC; padding:2px 8px; border-radius:4px; margin-left:auto; }
-    .bmcd-lbl { display:block; font-size:10px; font-weight:700; color:#4D6680; letter-spacing:.07em; text-transform:uppercase; margin-bottom:5px; }
-    .bmcd-req { color:#DC2626; margin-left:2px; }
-    .cap-wrap { background:#F0F4F8; border-radius:8px; padding:12px 14px; margin:10px 0 16px; }
-    .cap-row { display:flex; justify-content:space-between; font-size:10px; font-weight:600; color:#4D6680; margin-bottom:7px; }
-    .cap-track { height:7px; background:#D4DCE6; border-radius:99px; overflow:hidden; }
-    .cap-fill { height:100%; border-radius:99px; }
-    .counter { background:linear-gradient(90deg,#0049CD,#0066FF); border-radius:8px; padding:12px 16px; display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
-    .c-lbl { font-size:11px; color:rgba(255,255,255,.75); margin-bottom:1px; }
-    .c-num { font-size:21px; font-weight:800; color:#E6F001; line-height:1; }
-    .c-of { font-size:12px; font-weight:400; color:rgba(255,255,255,.5); margin-left:4px; }
-    .bi { display:flex; align-items:center; gap:11px; padding:11px 14px; border-radius:0; margin-bottom:0; border-top:1px solid #E8EDF4; cursor:pointer; transition:background .1s; }
-    .bi:first-child { border-top:none; }
-    .bi.chk { background:#E6F9EE; }
-    .bi.unchk { background:#fff; }
-    .bi.unchk:hover { background:#F8FAFB; }
-    .bi.chk-pending { background:#FFFBEB; }
-    .bi.chk-reservation { background:#EFF6FF; }
-    .cbox { width:18px; height:18px; border-radius:5px; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
-    .cbox.on { background:#1A9B5A; }
-    .cbox.on-pending { background:#D97706; }
-    .cbox.on-reservation { background:#1D4ED8; }
-    .cbox.off { background:#fff; border:2px solid #B4C4D4; }
-    .submit-zone { background:#002D59; border-radius:12px; padding:22px 26px; margin-bottom:16px; }
-    .submit-inner { display:flex; align-items:center; justify-content:space-between; gap:20px; }
-    .submit-text { color:rgba(255,255,255,.7); font-size:12px; line-height:1.6; max-width:420px; }
-    .submit-text strong { color:#E6F001; }
-    .submit-btn-active { background:#E6F001; color:#002D59; border:none; border-radius:8px; padding:14px 28px; font-size:14px; font-weight:800; cursor:pointer; white-space:nowrap; flex-shrink:0; }
-    .submit-btn-dis { background:#4D6680; color:rgba(255,255,255,.4); border:none; border-radius:8px; padding:14px 28px; font-size:14px; font-weight:700; cursor:not-allowed; white-space:nowrap; flex-shrink:0; }
-    .bmcd-footer { text-align:center; padding:16px 0 24px; font-size:10px; color:#94A3B8; letter-spacing:.07em; }
-    .err-box { background:#FEF2F2; border:1px solid #FECACA; color:#DC2626; border-radius:8px; padding:10px 14px; font-size:13px; margin-bottom:12px; }
-    .queue-notice { background:#FEF3C7; border:1px solid #FDE68A; color:#92400E; border-radius:8px; padding:10px 14px; font-size:12px; margin-bottom:10px; line-height:1.5; }
+      background-image: repeating-linear-gradient(-55deg,transparent,transparent 18px,rgba(0,73,205,0.3) 18px,rgba(0,73,205,0.3) 22px);
+      pointer-events:none; }
+    .bmcd-header-left { position:relative; z-index:1; display:flex; align-items:center; gap:14px; }
+    .bmcd-header-right { position:relative; z-index:1; display:flex; gap:10px; }
+    .bmcd-logo-wrap { background:rgba(255,255,255,.1); border-radius:10px; width:42px; height:42px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .bmcd-title { color:#fff; font-size:18px; font-weight:800; letter-spacing:.02em; }
+    .bmcd-title-sub { color:rgba(255,255,255,.55); font-size:11px; margin-top:2px; letter-spacing:.04em; }
+    .btn-header-outline { background:rgba(255,255,255,.1); color:#fff; border:1.5px solid rgba(255,255,255,.25); border-radius:7px; padding:8px 16px; font-size:12px; font-weight:600; cursor:pointer; }
+    .btn-header-outline:disabled { opacity:.5; cursor:wait; }
+    .btn-header-neon { background:#E6F001; color:#002D59; border:none; border-radius:7px; padding:8px 16px; font-size:12px; font-weight:800; cursor:pointer; }
+    .btn-header-neon:disabled { opacity:.5; cursor:wait; }
+
+    /* Stats bar */
+    .stats-bar { background:#0049CD; padding:0 36px; display:flex; }
+    .stat-item { padding:13px 32px 13px 0; border-right:1px solid rgba(255,255,255,.15); margin-right:32px; }
+    .stat-item:last-child { border-right:none; }
+    .stat-num { font-size:22px; font-weight:800; color:#E6F001; line-height:1; }
+    .stat-lbl { font-size:9px; font-weight:700; color:rgba(255,255,255,.6); letter-spacing:.1em; text-transform:uppercase; margin-top:3px; }
+
+    /* Main */
+    .bmcd-main { padding:24px 36px; max-width:880px; margin:0 auto; }
+    .section-row { display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+    .section-title { font-size:14px; font-weight:700; color:#002D59; }
+    .count-pill { font-size:11px; font-weight:700; padding:2px 9px; border-radius:99px; }
+    .count-pill.amber { background:#FEF3C7; color:#92400E; }
+    .count-pill.green { background:#DCFCE7; color:#166534; }
+    .count-pill.gray  { background:#F1F5F9; color:#64748B; }
+
+    /* Request cards */
+    .req-card { background:#fff; border-radius:12px; border:1px solid #D4DCE6; box-shadow:0 2px 14px rgba(0,45,89,.07); margin-bottom:16px; overflow:hidden; }
+    .req-card-top { padding:18px 22px; border-bottom:1px solid #EEF2F7; display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+    .req-opp { font-size:16px; font-weight:800; color:#002D59; }
+    .req-proj { font-size:13px; color:#4D6680; margin-top:3px; }
+    .req-client { color:#94A3B8; }
+    .pill { font-size:10px; font-weight:700; padding:3px 10px; border-radius:99px; white-space:nowrap; flex-shrink:0; display:inline-flex; align-items:center; }
+    .pill-pending  { background:#FEF3C7; color:#92400E; }
+    .pill-approved { background:#DCFCE7; color:#166534; }
+    .pill-denied   { background:#FEE2E2; color:#991B1B; }
+    .pill-cap-ok   { background:#EEF3FC; color:#0049CD; }
+    .pill-cap-warn { background:#FEF2F2; color:#991B1B; }
+
+    /* Meta grid */
+    .meta-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px 16px; padding:14px 22px; background:#F8FAFC; border-bottom:1px solid #EEF2F7; }
+    .meta-lbl { font-size:9px; font-weight:700; color:#94A3B8; letter-spacing:.1em; text-transform:uppercase; margin-bottom:3px; }
+    .meta-val { font-size:12px; font-weight:600; color:#002D59; }
+
+    /* Breaker list */
+    .breaker-section { padding:14px 22px; border-bottom:1px solid #EEF2F7; }
+    .breaker-lbl { font-size:9px; font-weight:700; color:#94A3B8; letter-spacing:.1em; text-transform:uppercase; margin-bottom:8px; }
+    .breaker-row { display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:7px; margin-bottom:4px; }
+    .breaker-row.avail { background:#F0FDF4; border:1px solid #BBF7D0; }
+    .breaker-row.reserved-state { background:#FEF2F2; border:1px solid #FECACA; }
+    .breaker-row.unknown { background:#F8FAFC; border:1px solid #D4DCE6; }
+    .breaker-name { font-size:12px; font-weight:600; color:#002D59; flex:1; }
+    .breaker-meta-text { font-size:11px; color:#94A3B8; margin-top:1px; }
+    .b-pill { font-size:10px; font-weight:700; padding:2px 8px; border-radius:99px; flex-shrink:0; }
+    .b-pill.g { background:#DCFCE7; color:#166534; }
+    .b-pill.r { background:#FEE2E2; color:#991B1B; }
+    .b-pill.u { background:#F1F5F9; color:#64748B; }
+
+    /* Actions */
+    .action-bar { padding:14px 22px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    .btn-approve { background:#1A9B5A; color:#fff; border:none; border-radius:7px; padding:10px 22px; font-size:13px; font-weight:700; cursor:pointer; }
+    .btn-approve:disabled { background:#94A3B8; cursor:not-allowed; }
+    .btn-deny { background:#DC2626; color:#fff; border:none; border-radius:7px; padding:10px 22px; font-size:13px; font-weight:700; cursor:pointer; }
+    .btn-deny:disabled { background:#94A3B8; cursor:not-allowed; }
+    .btn-view-link { background:none; color:#0049CD; border:none; font-size:12px; font-weight:600; cursor:pointer; text-decoration:underline; margin-left:auto; }
+
+    /* Result banners */
+    .approved-banner { padding:14px 22px; background:#F0FDF4; border-top:3px solid #1A9B5A; display:flex; align-items:center; gap:12px; }
+    .denied-banner   { padding:14px 22px; background:#FEF2F2; border-top:3px solid #DC2626; display:flex; align-items:center; gap:12px; }
+    .banner-icon { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .banner-title { font-size:12px; font-weight:700; }
+    .banner-title.g { color:#166534; }
+    .banner-title.r { color:#991B1B; }
+    .banner-sub { font-size:11px; color:#64748B; margin-top:2px; }
+    .banner-warn { font-size:11px; color:#D97706; margin-top:4px; }
+
+    /* Error box */
+    .err-box { background:#FEF2F2; border:1px solid #FECACA; color:#DC2626; border-radius:8px; padding:10px 14px; font-size:12px; margin-bottom:10px; }
+
+    /* Sync message */
+    .sync-msg { border-radius:8px; padding:10px 16px; margin-bottom:14px; font-size:12px; font-weight:600; }
+    .sync-msg.ok   { background:#F0FDF4; border:1px solid #86EFAC; color:#166534; }
+    .sync-msg.fail { background:#FEF2F2; border:1px solid #FECACA; color:#DC2626; }
+
+    /* History cards */
+    .hist-card { background:#fff; border-radius:10px; border:1px solid #D4DCE6; padding:13px 18px; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between; opacity:.88; }
+    .hist-opp  { font-size:13px; font-weight:700; color:#002D59; }
+    .hist-meta { font-size:11px; color:#94A3B8; margin-top:2px; }
+
+    /* Setup */
     .setup-wrap { min-height:100vh; background:#E2E8F0; display:flex; align-items:center; justify-content:center; padding:24px; }
     .setup-box { background:#fff; border-radius:14px; box-shadow:0 4px 28px rgba(0,45,89,.12); padding:40px; max-width:470px; width:100%; }
     .setup-logo-row { display:flex; align-items:center; gap:13px; margin-bottom:6px; }
     .setup-divider { height:1px; background:#E8EDF4; margin:18px 0 22px; }
-    .setup-inp { width:100%; padding:10px 13px; border:1.5px solid #D4DCE6; border-radius:7px; font-size:14px; color:#002D59; outline:none; background:#F8FAFB; }
+    .setup-inp { width:100%; padding:10px 13px; border:1.5px solid #D4DCE6; border-radius:7px; font-size:14px; color:#002D59; outline:none; background:#F8FAFB; margin-bottom:0; }
     .setup-inp:focus { border-color:#0049CD; background:#fff; box-shadow:0 0 0 3px rgba(0,73,205,.1); }
     .setup-hint { font-size:11px; color:#94A3B8; margin:4px 0 18px; }
-    .setup-btn { background:#0049CD; color:#fff; border:none; border-radius:8px; padding:13px 24px; font-size:14px; font-weight:700; cursor:pointer; width:100%; margin-top:4px; }
+    .setup-btn { background:#0049CD; color:#fff; border:none; border-radius:8px; padding:13px 24px; font-size:14px; font-weight:700; cursor:pointer; width:100%; }
     .setup-btn:disabled { opacity:.6; cursor:wait; }
-    .bmcd-main { padding:24px 36px; max-width:880px; margin:0 auto; }
-    .g2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:14px; }
-    .g1 { display:grid; grid-template-columns:1fr; gap:16px; margin-bottom:0; }
-    .std-inp { width:100%; padding:9px 12px; border:1.5px solid #D4DCE6; border-radius:7px; font-size:13px; color:#1e293b; outline:none; background:#F8FAFB; }
-    .std-inp:focus { border-color:#0049CD; background:#fff; box-shadow:0 0 0 3px rgba(0,73,205,.1); }
-    .legend { display:flex; gap:14px; flex-wrap:wrap; margin-bottom:12px; }
-    .legend-item { display:flex; align-items:center; gap:5px; font-size:10px; color:#4D6680; }
-    .legend-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+    .bmcd-lbl { display:block; font-size:10px; font-weight:700; color:#4D6680; letter-spacing:.07em; text-transform:uppercase; margin-bottom:5px; }
+
+    /* Deny modal */
+    .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center; padding:24px; z-index:1000; }
+    .modal-box { background:#fff; border-radius:14px; padding:32px; max-width:440px; width:100%; box-shadow:0 20px 60px rgba(0,0,0,.2); }
+    .modal-title { font-size:17px; font-weight:800; color:#002D59; margin-bottom:6px; }
+    .modal-body { font-size:13px; color:#4D6680; margin-bottom:20px; line-height:1.5; }
+    .modal-textarea { width:100%; padding:10px 13px; border:1.5px solid #D4DCE6; border-radius:7px; font-size:13px; color:#002D59; outline:none; background:#F8FAFB; resize:vertical; margin-bottom:20px; }
+    .modal-textarea:focus { border-color:#DC2626; background:#fff; }
+    .modal-actions { display:flex; gap:10px; }
+    .modal-confirm { background:#DC2626; color:#fff; border:none; border-radius:7px; padding:11px 22px; font-size:13px; font-weight:700; cursor:pointer; flex:1; }
+    .modal-cancel { background:#F0F4F8; color:#334155; border:1.5px solid #D4DCE6; border-radius:7px; padding:11px 22px; font-size:13px; font-weight:600; cursor:pointer; flex:1; }
+
+    /* Footer */
+    .bmcd-footer { text-align:center; padding:16px 0 28px; font-size:10px; color:#94A3B8; letter-spacing:.07em; }
+
+    /* Loading */
+    .loading-state { text-align:center; padding:48px 0; color:#94A3B8; font-size:13px; }
+    .empty-state { text-align:center; padding:32px 0; color:#94A3B8; font-size:13px; }
   </style>
 </head>
 <body>
   <div id="root"></div>
   <script type="text/babel">
-    const { useState, useEffect } = React;
+    const { useState, useEffect, useCallback } = React;
 
-    // TODO: replace with your deployed Cloudflare Worker's URL, e.g.
-    // "https://breaker-slot.yourname.workers.dev" — no trailing slash.
-    const PROXY_BASE_URL    = "https://breaker-slot-proxy.dsantoy2014.workers.dev";
-    const PROXY_READ_URL    = PROXY_BASE_URL + "/read";
-    const PROXY_SUBMIT_URL  = PROXY_BASE_URL + "/submit";
-    // Must match the PROXY_SHARED_SECRET variable set in the Worker's settings.
+    // TODO: replace with your deployed Cloudflare Worker's URL — the SAME
+    // Worker the Request Form uses — no trailing slash.
+    const PROXY_BASE_URL   = "https://breaker-slot-proxy.dsantoy2014.workers.dev";
     const PROXY_SHARED_SECRET = "BurnsMcDonnell2026";
 
-    const SLOT_BOARD_ID     = 18422871700;
     const REQUESTS_BOARD_ID = 18422875681;
     const SUBITEMS_BOARD_ID = 18426331487;
+    const SLOT_BOARD_ID     = 18422871700;
 
-    // Only B&M email addresses may submit. This is a cheap client-side guard for
-    // UX only — the proxy must enforce this same rule server-side, since anyone
-    // could bypass client-side JS entirely.
-    const ALLOWED_EMAIL_DOMAIN = "burnsmcd.com";
-    const isValidEmail = (email) => {
-      const e = (email||"").trim().toLowerCase();
-      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e) && e.endsWith("@"+ALLOWED_EMAIL_DOMAIN);
-    };
+    function colVal(cvs, id) { return cvs?.find(c=>c.id===id)?.text || ""; }
+    function colRaw(cvs, id) { const r=cvs?.find(c=>c.id===id)?.value; try{return r?JSON.parse(r):null;}catch{return null;} }
 
-    // Statuses that cannot be selected (fully locked)
-    const LOCKED_STATUSES = ["Reserved", "Delivered"];
-    // Statuses that are selectable but mean queue position
-    const QUEUE_STATUSES = ["Pending Review", "Pending Reservation"];
+    async function proxyGet(path) {
+      const res = await fetch(PROXY_BASE_URL + path, { headers:{ "X-Proxy-Secret": PROXY_SHARED_SECRET } });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    }
+    async function proxyPost(path, body) {
+      const res = await fetch(PROXY_BASE_URL + path, {
+        method:"POST",
+        headers:{ "Content-Type":"application/json", "X-Proxy-Secret": PROXY_SHARED_SECRET },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    }
 
-    function colMap(cvs) { const m={}; cvs.forEach(c=>{m[c.id]=c.text;}); return m; }
-
-    const statusStyle = (status) => {
-      if (status==="Available")           return { color:"#1A9B5A", bg:"#DCFCE7", label:"Available" };
-      if (status==="Pending Review")      return { color:"#92400E", bg:"#FEF3C7", label:"Pending Review" };
-      if (status==="Pending Reservation") return { color:"#1D4ED8", bg:"#DBEAFE", label:"Pending Reservation" };
-      if (status==="Reserved")            return { color:"#991B1B", bg:"#FEE2E2", label:"Reserved" };
-      if (status==="Delivered")           return { color:"#374151", bg:"#F3F4F6", label:"Delivered" };
-      return { color:"#64748B", bg:"#F1F5F9", label:status||"Unknown" };
-    };
-
-    const cboxClass = (status, checked) => {
-      if (!checked) return "cbox off";
-      if (status==="Available") return "cbox on";
-      if (status==="Pending Review") return "cbox on-pending";
-      return "cbox on-reservation";
-    };
-
-    const biClass = (status, checked) => {
-      if (!checked) return "bi unchk";
-      if (status==="Available") return "bi chk";
-      if (status==="Pending Review") return "bi chk-pending";
-      return "bi chk-reservation";
-    };
-
-    const LogoMark = () => (
-      <img src="https://raw.githubusercontent.com/Dsantoy/breaker-tools/main/ampersand-mark-white.svg" width="34" height="34" alt=""/>
+    /* BMcD logo mark */
+    const LogoMark = ({ size=28 }) => (
+      <img src="https://raw.githubusercontent.com/Dsantoy/breaker-tools/main/ampersand-mark-white.svg" width={size} height={size} alt=""/>
     );
 
     function App() {
-      const [setupLoad, setSetupLoad] = useState(true);
-      const [setupErr,  setSetupErr]  = useState("");
-      const [screen,    setScreen]    = useState("loading");
+      const [reviewerEmail, setReviewerEmail] = useState("");
+      const [loginInput,  setLoginInput]  = useState("");
+      const [setupLoad,   setSetupLoad]   = useState(false);
+      const [setupErr,    setSetupErr]    = useState("");
+      const [screen,      setScreen]      = useState("setup");
+      const [requests,    setRequests]    = useState({ pending:[], history:[] });
+      const [loading,     setLoading]     = useState(false);
+      const [loadErr,     setLoadErr]     = useState("");
+      const [actionState, setActionState] = useState({});
+      const [denyTarget,  setDenyTarget]  = useState(null);
+      const [denyReason,  setDenyReason]  = useState("");
+      const [syncing,     setSyncing]     = useState(false);
+      const [syncMsg,     setSyncMsg]     = useState("");
 
-      const [poLines,         setPoLines]         = useState([]);
-      const [subitemsByLine,  setSubitemsByLine]   = useState({});
-
-      // Multiple PO lines can be added; selectedIds holds units across ALL added lines.
-      const [addedLineIds,     setAddedLineIds]      = useState([]);
-      const [pickerValue,      setPickerValue]       = useState("");
-      const [selectedIds,      setSelectedIds]       = useState([]);
-      const [submittedSummary, setSubmittedSummary]  = useState({ lines:"", count:0 });
-
-      const [form, setForm] = useState({
-        projectName:"", clientName:"", requesterName:"", requesterEmail:"",
-        opportunityNumber:"", estimatedValue:"", breakersEnable:"", dropDeadDate:"", notes:"",
-      });
-      const [submitting,  setSubmitting]  = useState(false);
-      const [submitErr,   setSubmitErr]   = useState("");
-      const [createdItem, setCreatedItem] = useState(null);
-      const [wasQueued,   setWasQueued]   = useState(false);
-
-      /* ── Load availability data on mount, via the read proxy ── */
-      const loadData = async () => {
+      /* ── Login (allowlist check, no Monday credential involved) ── */
+      const handleSetup = async () => {
+        const email = loginInput.trim().toLowerCase();
+        if (!email) { setSetupErr("Email is required."); return; }
         setSetupErr(""); setSetupLoad(true);
         try {
-          const res = await fetch(PROXY_READ_URL, { headers:{ "X-Proxy-Secret": PROXY_SHARED_SECRET } });
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          const bd = await res.json();
-          // Expected shape mirrors the original Monday GraphQL response exactly:
-          // { boards: [ { items_page: { items: [ ... ] } } ] }
-
-          const sbl = {};
-          const lines = bd.boards[0].items_page.items.map(item => {
-            const cols = colMap(item.column_values);
-            const subs = (item.subitems||[]).map(si => {
-              const sc = colMap(si.column_values);
-              return { id:si.id, name:si.name, status:sc["status"]||"", voltage:sc["dropdown_mm65b542"]||"", manufacturer:sc["dropdown_mm65c7mt"]||"", deliveryDate:sc["date_mm65h7tw"]||"" };
-            });
-            sbl[item.id] = subs;
-            const selectableCount = subs.filter(s=>!LOCKED_STATUSES.includes(s.status)).length;
-            return {
-              id:item.id, name:item.name,
-              voltage:cols["dropdown_mm5ese7e"]||"",
-              manufacturer:cols["dropdown_mm5ef8kt"]||"",
-              deliveryDate:cols["date4"]||"",
-              poLineNum:parseFloat(cols["numeric_mm5sv1e1"]||"0"),
-              selectableCount,
-              totalCount:subs.length,
-            };
-          });
-          lines.sort((a,b)=>a.poLineNum-b.poLineNum);
-
-          setPoLines(lines);
-          setSubitemsByLine(sbl);
-          setScreen("form");
-        } catch(e) { setSetupErr("Could not load slot availability: "+e.message); }
+          const result = await proxyPost("/reviewer-login", { email });
+          if (!result.authorized) {
+            setSetupErr("This email is not on the BSF Review Committee list. Contact the program owner if this is a mistake.");
+            return;
+          }
+          setReviewerEmail(email);
+          setScreen("dashboard");
+          loadRequests();
+        } catch(e) { setSetupErr("Connection failed: "+e.message); }
         finally { setSetupLoad(false); }
       };
 
-      useEffect(() => { loadData(); }, []);
-
-      /* ── Derived state from selected line ── */
-      const addedLines      = addedLineIds.map(id=>poLines.find(l=>l.id===id)).filter(Boolean);
-      const allSubitems     = addedLineIds.flatMap(id=>subitemsByLine[id]||[]);
-      const hasQueueItems   = selectedIds.some(id=>QUEUE_STATUSES.includes(allSubitems.find(s=>s.id===id)?.status||""));
-      const toggle = id => setSelectedIds(p=>p.includes(id)?p.filter(x=>x!==id):[...p,id]);
-      const addLine = id => { if (id && !addedLineIds.includes(id)) setAddedLineIds(p=>[...p,id]); setPickerValue(""); };
-      const removeLine = id => {
-        setAddedLineIds(p=>p.filter(x=>x!==id));
-        const drop = new Set((subitemsByLine[id]||[]).map(s=>s.id));
-        setSelectedIds(p=>p.filter(x=>!drop.has(x)));
-      };
-      const selectAllIn = ids => setSelectedIds(p=>[...new Set([...p,...ids])]);
-      const clearIn     = ids => setSelectedIds(p=>p.filter(x=>!ids.includes(x)));
-      // Lines that actually have selected units (what gets submitted)
-      const linesWithSelection = addedLines.filter(l=>(subitemsByLine[l.id]||[]).some(s=>selectedIds.includes(s.id)));
-      const lineSummary = linesWithSelection.map(l=>l.name).join(", ");
-      const lineOptionLabel = l => `Line ${String(l.poLineNum).padStart(2,"0")} — ${l.voltage}kV ${l.manufacturer} — Delivery ${l.deliveryDate} — ${l.selectableCount} of ${l.totalCount} selectable`;
-
-      const isValid = form.projectName.trim()&&form.clientName.trim()&&
-        form.requesterName.trim()&&isValidEmail(form.requesterEmail)&&
-        form.opportunityNumber.trim()&&form.estimatedValue&&form.breakersEnable&&
-        form.dropDeadDate&&selectedIds.length>0;
-
-      /* ── Submit — everything (identity lookup, live collision check, item
-         creation, subitem status updates) happens server-side in the proxy.
-         The client only sends the raw submission and displays the result. ── */
-      const handleSubmit = async () => {
-        if (!isValid) { setSubmitErr("Please complete all required fields, use a valid @"+ALLOWED_EMAIL_DOMAIN+" email, and select at least one breaker unit."); return; }
-        setSubmitErr(""); setSubmitting(true);
+      /* ── Load requests ── */
+      const loadRequests = useCallback(async () => {
+        setLoading(true); setLoadErr("");
         try {
-          const payload = {
-            projectName:        form.projectName,
-            clientName:         form.clientName,
-            requesterName:      form.requesterName.trim(),
-            requesterEmail:     form.requesterEmail.trim().toLowerCase(),
-            opportunityNumber:  form.opportunityNumber,
-            estimatedValue:     parseFloat(form.estimatedValue)||0,
-            breakersEnable:     form.breakersEnable,
-            dropDeadDate:       form.dropDeadDate,
-            // Backward compat: poLineId = first line with a selection.
-            poLineId:           linesWithSelection[0]?.id || "",
-            poLineIds:          linesWithSelection.map(l=>l.id),
-            selectedIds:        selectedIds,
-            // Units grouped by PO line
-            selections:         linesWithSelection.map(l=>({
-              poLineId:l.id, poLineName:l.name,
-              selectedIds:(subitemsByLine[l.id]||[]).filter(s=>selectedIds.includes(s.id)).map(s=>s.id),
-            })),
-            notes:              form.notes.trim(),
-          };
-          const res = await fetch(PROXY_SUBMIT_URL, {
-            method:"POST", headers:{"Content-Type":"application/json", "X-Proxy-Secret": PROXY_SHARED_SECRET}, body:JSON.stringify(payload),
-          });
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          const result = await res.json();
-          if (!result.success) throw new Error(result.error || "Submission failed.");
+          const data = await proxyGet("/reviewer-read");
+          setRequests(data);
+        } catch(e) { setLoadErr("Failed to load requests: "+e.message); }
+        finally { setLoading(false); }
+      }, []);
 
-          // result.updatedIds: subitem ids the proxy actually flipped Available -> Pending Review
-          // (ids that were already queue-status are left untouched, same as before)
-          setSubitemsByLine(prev => {
-            const updated = { ...prev };
-            const flipped = new Set(result.updatedIds || []);
-            Object.keys(updated).forEach(lid => {
-              updated[lid] = updated[lid].map(s =>
-                flipped.has(s.id) ? { ...s, status:"Pending Review" } : s
-              );
-            });
-            return updated;
-          });
-
-          setSubmittedSummary({ lines:lineSummary, count:selectedIds.length });
-          setWasQueued(!!result.wasQueued);
-          setCreatedItem({ url: result.itemUrl });
-          setScreen("success");
-        } catch(e) { setSubmitErr("Submission failed: "+e.message); }
-        finally { setSubmitting(false); }
+      /* ── Sync counts ── */
+      const syncAllCounts = async () => {
+        setSyncing(true); setSyncMsg("");
+        try {
+          const result = await proxyPost("/reviewer-sync-counts", { reviewerEmail });
+          setSyncMsg(result.success ? result.message : ("Sync failed: "+result.error));
+          setTimeout(()=>setSyncMsg(""), 6000);
+        } catch(e) { setSyncMsg("Sync failed: "+e.message); }
+        finally { setSyncing(false); }
       };
 
-      const reset = () => {
-        setForm({ projectName:"", clientName:"", requesterName:"", requesterEmail:"", opportunityNumber:"", estimatedValue:"", breakersEnable:"", dropDeadDate:"", notes:"" });
-        setAddedLineIds([]); setPickerValue(""); setSelectedIds([]); setSubmitErr(""); setCreatedItem(null); setWasQueued(false);
+      /* ── Approve ── */
+      const handleApprove = async req => {
+        setActionState(p=>({...p,[req.id]:{working:true,error:null,done:false}}));
+        try {
+          const result = await proxyPost("/reviewer-approve", {
+            reviewerEmail,
+            requestId: req.id,
+            breakerIds: req.breakerIds,
+            opportunityNum: req.opportunityNum,
+            requesterId: req.requesterId,
+            slotId: req.slotId,
+          });
+          if (!result.success) throw new Error(result.error || "Approval failed.");
+          setActionState(p=>({...p,[req.id]:{ working:false, error:result.errors?result.errors.join("; "):null, done:true, outcome:"approved" }}));
+          setTimeout(()=>loadRequests(), 1800);
+        } catch(e) {
+          setActionState(p=>({...p,[req.id]:{ working:false, error:"Approval failed: "+e.message, done:false }}));
+        }
       };
 
-      const VOLT_GROUPS = [
-        { label:"145 kV — GE", key:"145" },
-        { label:"245 kV — GE / Hitachi", key:"245" },
-        { label:"362 kV — Hitachi", key:"362" },
-      ];
+      /* ── Deny ── */
+      const handleDeny = async (req, reason) => {
+        setDenyTarget(null); setDenyReason("");
+        setActionState(p=>({...p,[req.id]:{working:true,error:null,done:false}}));
+        try {
+          const result = await proxyPost("/reviewer-deny", { reviewerEmail, requestId: req.id, reason, breakerIds: req.breakerIds });
+          if (!result.success) throw new Error(result.error || "Denial failed.");
+          setActionState(p=>({...p,[req.id]:{ working:false, error:null, done:true, outcome:"denied" }}));
+          setTimeout(()=>loadRequests(), 1800);
+        } catch(e) {
+          setActionState(p=>({...p,[req.id]:{ working:false, error:"Denial failed: "+e.message, done:false }}));
+        }
+      };
 
-      /* ── SETUP ── */
-      if (screen==="loading") return (
+      /* ── Mark as Reserved (customer PO received) ── */
+      const [markReservedState, setMarkReservedState] = useState({});
+
+      const handleMarkReserved = async (req) => {
+        setMarkReservedState(p=>({...p,[req.id]:{working:true,error:null,done:false}}));
+        try {
+          const result = await proxyPost("/reviewer-mark-reserved", {
+            reviewerEmail,
+            breakerIds: req.breakerIds,
+            slotId: req.slotId,
+          });
+          if (!result.success) throw new Error(result.error || "Failed.");
+          setMarkReservedState(p=>({...p,[req.id]:{ working:false, error:result.errors?result.errors.join("; "):null, done:true }}));
+          setTimeout(()=>loadRequests(), 1800);
+        } catch(e) {
+          setMarkReservedState(p=>({...p,[req.id]:{ working:false, error:"Failed: "+e.message, done:false }}));
+        }
+      };
+
+      /* ── SETUP / LOGIN SCREEN ── */
+      if (screen==="setup") return (
         <div className="setup-wrap">
           <div className="setup-box">
             <div className="setup-logo-row">
@@ -310,382 +290,348 @@
                 <LogoMark/>
               </div>
               <div>
-                <div style={{ fontSize:16, fontWeight:800, color:"#002D59", letterSpacing:".04em" }}>BURNS &amp; McDONNELL</div>
-                <div style={{ fontSize:11, color:"#94A3B8", marginTop:2 }}>HV Circuit Breaker Slot Program</div>
+                <div style={{ fontSize:16, fontWeight:800, color:"#002D59", letterSpacing:".03em" }}>BURNS &amp; McDONNELL</div>
+                <div style={{ fontSize:11, color:"#94A3B8", marginTop:2 }}>BSF Review Dashboard</div>
               </div>
             </div>
             <div className="setup-divider"/>
-            {setupErr ? (
-              <>
-                <div className="err-box">{setupErr}</div>
-                <button onClick={loadData} disabled={setupLoad} className="setup-btn">
-                  {setupLoad ? "Retrying…" : "Retry"}
-                </button>
-              </>
-            ) : (
-              <p style={{ color:"#4D6680", fontSize:13, lineHeight:1.6, textAlign:"center" }}>
-                Loading current breaker availability…
-              </p>
-            )}
-          </div>
-        </div>
-      );
-
-      /* ── SUCCESS ── */
-      if (screen==="success") return (
-        <div className="setup-wrap">
-          <div className="setup-box" style={{ maxWidth:520, textAlign:"center" }}>
-            <div style={{ width:60, height:60, background:"#E6F001", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 18px" }}>
-              <svg width="28" height="28" fill="none" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" stroke="#002D59" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            </div>
-            <div style={{ fontSize:22, fontWeight:800, color:"#002D59", marginBottom:8 }}>
-              {wasQueued ? "Added to Queue!" : "Request Submitted!"}
-            </div>
-            <div style={{ color:"#4D6680", fontSize:13, lineHeight:1.6, marginBottom:22 }}>
-              {wasQueued ? (
-                <>Your request for <strong style={{ color:"#002D59" }}>{form.opportunityNumber}</strong> has been placed <strong style={{ color:"#1D4ED8" }}>in the queue</strong>. The selected breakers already have a pending reservation. You will be notified by the BSF Review Committee if the original request falls through and your reservation becomes available.</>
-              ) : (
-                <>Your slot reservation request for <strong style={{ color:"#002D59" }}>{form.opportunityNumber}</strong> has been submitted. Your selected breakers are now marked <strong style={{ color:"#92400E" }}>Pending Review</strong>. Please check your email for submission details and next steps.</>
-              )}
-            </div>
-            <div style={{ background:"#EEF3FC", borderRadius:10, padding:16, marginBottom:22, textAlign:"left" }}>
-              <div style={{ fontSize:9, fontWeight:700, color:"#0049CD", marginBottom:10, letterSpacing:".1em" }}>SUBMISSION SUMMARY</div>
-              {[
-                ["Project",          form.projectName],
-                ["Client",           form.clientName],
-                ["Opportunity #",    form.opportunityNumber],
-                ["PO Line(s)",       submittedSummary.lines||"—"],
-                ["Breakers Selected",`${submittedSummary.count} unit${submittedSummary.count!==1?"s":""}`],
-                ...(form.notes.trim() ? [["Notes", form.notes.trim()]] : []),
-                ["Requester",        form.requesterName ? `${form.requesterName} (${form.requesterEmail})` : "—"],
-              ].map(([k,v])=>(
-                <div key={k} style={{ display:"flex", justifyContent:"space-between", fontSize:12, color:"#334155", marginBottom:5, gap:12, whiteSpace:"pre-wrap" }}>
-                  <span style={{ color:"#94A3B8" }}>{k}</span>
-                  <span style={{ fontWeight:600 }}>{v}</span>
-                </div>
-              ))}
-              {createdItem?.url && (
-                <a href={createdItem.url} target="_blank" rel="noreferrer"
-                  style={{ display:"block", marginTop:12, fontSize:11, color:"#0049CD", textDecoration:"underline" }}>
-                  View in Monday.com →
-                </a>
-              )}
-            </div>
-            <button onClick={()=>{reset();setScreen("form");}}
-              style={{ background:"#F0F4F8", color:"#334155", border:"1.5px solid #D4DCE6", borderRadius:8, padding:"11px 24px", fontSize:13, fontWeight:600, cursor:"pointer", width:"100%" }}>
-              Submit Another Request
+            <p style={{ color:"#4D6680", fontSize:13, marginBottom:22, lineHeight:1.6 }}>
+              Reviewer-only tool, restricted to the BSF Review Committee. Approving a request automatically marks all selected breaker units as Reserved in Monday.com, updates the slot Reserved Qty, and writes the opportunity number to each unit.
+            </p>
+            <label className="bmcd-lbl">Your Email <span style={{ color:"#DC2626" }}>*</span></label>
+            <input type="email" value={loginInput} onChange={e=>setLoginInput(e.target.value)}
+              onKeyDown={e=>e.key==="Enter"&&handleSetup()}
+              placeholder="you@burnsmcd.com" className="setup-inp"/>
+            <div className="setup-hint">Restricted to BSF Review Committee members.</div>
+            {setupErr && <div className="err-box">{setupErr}</div>}
+            <button onClick={handleSetup} disabled={setupLoad} className="setup-btn">
+              {setupLoad ? "Checking…" : "Open Review Dashboard →"}
             </button>
           </div>
         </div>
       );
 
-      /* ── MAIN FORM ── */
+      /* ── DASHBOARD ── */
+      const { pending=[], queued=[], history=[] } = requests;
+
       return (
-        <div>
+        <div style={{ minHeight:"100vh", background:"#E2E8F0", paddingBottom:40 }}>
+
           {/* Header */}
           <div className="bmcd-header">
-            <div className="bmcd-header-inner">
-              <div className="bmcd-logo-row">
-                <LogoMark/>
-                <div className="bmcd-logo-wordmark">
-                  <span className="brand">BURNS &amp; McDONNELL</span>
-                  <span className="est">ESTABLISHED 1898</span>
-                </div>
+            <div className="bmcd-header-left">
+              <div className="bmcd-logo-wrap"><LogoMark/></div>
+              <div>
+                <div className="bmcd-title">BSF Review Dashboard</div>
+                <div className="bmcd-title-sub">BURNS &amp; McDONNELL &nbsp;·&nbsp; HV CIRCUIT BREAKER SLOT PROGRAM &nbsp;·&nbsp; {reviewerEmail}</div>
               </div>
-              <div className="bmcd-eyebrow">HV Circuit Breaker Slot Program</div>
-              <div className="bmcd-hero-title">Slot <span>Reservation</span> Request Form</div>
-              <div className="bmcd-neon-bar"/>
-              <div className="bmcd-hero-sub">Submit a slot reservation request for high-voltage circuit breakers. Wesco · GE · Hitachi — 145kV, 245kV, 362kV</div>
+            </div>
+            <div className="bmcd-header-right">
+              <button onClick={syncAllCounts} disabled={syncing||loading} className="btn-header-outline">
+                {syncing ? "Syncing…" : "Sync Counts"}
+              </button>
+              <button onClick={()=>loadRequests()} disabled={loading} className="btn-header-neon">
+                {loading ? "Loading…" : "Refresh"}
+              </button>
             </div>
           </div>
 
-          {/* Steps */}
-          <div className="bmcd-steps">
-            <div className={`bmcd-step ${!selectedIds.length?"active":"inactive"}`}>
-              <div className="bmcd-step-num">1</div>
-              <div className="bmcd-step-lbl">Project Details</div>
+          {/* Stats bar */}
+          <div className="stats-bar">
+            <div className="stat-item">
+              <div className="stat-num">{loading?"…":pending.length}</div>
+              <div className="stat-lbl">Pending Review</div>
             </div>
-            <div className="bmcd-step-div"/>
-            <div className={`bmcd-step ${selectedIds.length?"active":"inactive"}`}>
-              <div className="bmcd-step-num">2</div>
-              <div className="bmcd-step-lbl">Breaker Selection</div>
+            <div className="stat-item">
+              <div className="stat-num">{loading?"…":queued.length}</div>
+              <div className="stat-lbl">In Queue</div>
             </div>
-            <div className="bmcd-step-div"/>
-            <div className="bmcd-step inactive">
-              <div className="bmcd-step-num">3</div>
-              <div className="bmcd-step-lbl">Notes</div>
+            <div className="stat-item">
+              <div className="stat-num">{loading?"…":history.length}</div>
+              <div className="stat-lbl">Total Decisions</div>
+            </div>
+            <div className="stat-item">
+              <div className="stat-num">120</div>
+              <div className="stat-lbl">Total Program Units</div>
             </div>
           </div>
 
+          {/* Main content */}
           <div className="bmcd-main">
 
-            {/* Section A */}
-            <div className="bmcd-card">
-              <div className="bmcd-card-hdr">
-                <div className="bmcd-card-icon">
-                  <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke="#0049CD" strokeWidth="1.8" strokeLinecap="round"/></svg>
-                </div>
-                <div>
-                  <div className="bmcd-card-title">Project Details</div>
-                  <div className="bmcd-card-sub">Tell us about your project and opportunity</div>
-                </div>
-                <span className="bmcd-step-tag">STEP 01</span>
-              </div>
+            {syncMsg && (
+              <div className={`sync-msg ${syncMsg.startsWith("Synced")?"ok":"fail"}`}>{syncMsg}</div>
+            )}
+            {loadErr && <div className="err-box">{loadErr}</div>}
 
-              <div className="g2">
-                <div>
-                  <label className="bmcd-lbl">Project Name<span className="bmcd-req">*</span></label>
-                  <input value={form.projectName} onChange={e=>setForm(f=>({...f,projectName:e.target.value}))} className="std-inp" placeholder="e.g. Riverside Substation Expansion"/>
-                </div>
-                <div>
-                  <label className="bmcd-lbl">Client Name<span className="bmcd-req">*</span></label>
-                  <input value={form.clientName} onChange={e=>setForm(f=>({...f,clientName:e.target.value}))} className="std-inp" placeholder="e.g. American Electric Power"/>
-                </div>
-              </div>
-
-              <div className="g2">
-                <div>
-                  <label className="bmcd-lbl">Requester Name<span className="bmcd-req">*</span></label>
-                  <input value={form.requesterName} onChange={e=>setForm(f=>({...f,requesterName:e.target.value}))} className="std-inp" placeholder="e.g. Jane Doe"/>
-                </div>
-                <div>
-                  <label className="bmcd-lbl">Requester Email<span className="bmcd-req">*</span></label>
-                  <input type="email" value={form.requesterEmail} onChange={e=>setForm(f=>({...f,requesterEmail:e.target.value}))} className="std-inp" placeholder={"you@"+ALLOWED_EMAIL_DOMAIN}/>
-                  {form.requesterEmail.trim() && !isValidEmail(form.requesterEmail) && (
-                    <div style={{ color:"#DF2F4A", fontSize:11, marginTop:4 }}>Must be a valid @{ALLOWED_EMAIL_DOMAIN} email.</div>
-                  )}
-                </div>
-              </div>
-
-              <div className="g2">
-                <div>
-                  <label className="bmcd-lbl">Opportunity Number<span className="bmcd-req">*</span></label>
-                  <input value={form.opportunityNumber} onChange={e=>setForm(f=>({...f,opportunityNumber:e.target.value}))} className="std-inp" placeholder="e.g. OPP073319"/>
-                </div>
-                <div>
-                  <label className="bmcd-lbl">BMcD Estimated Project Value (USD)<span className="bmcd-req">*</span></label>
-                  <input type="number" min="0" value={form.estimatedValue} onChange={e=>setForm(f=>({...f,estimatedValue:e.target.value}))} className="std-inp" placeholder="e.g. 5000000"/>
-                </div>
-              </div>
-
-              <div className="g2" style={{ marginBottom:14 }}>
-                <div>
-                  <label className="bmcd-lbl">Drop-Dead Customer PO Release Date<span className="bmcd-req">*</span></label>
-                  <input type="date" value={form.dropDeadDate} onChange={e=>setForm(f=>({...f,dropDeadDate:e.target.value}))} className="std-inp"/>
-                </div>
-                <div>
-                  <label className="bmcd-lbl">Do the Breakers Enable the Project?<span className="bmcd-req">*</span></label>
-                  <select value={form.breakersEnable} onChange={e=>setForm(f=>({...f,breakersEnable:e.target.value}))} className="std-inp">
-                    <option value="">Select…</option>
-                    <option value="Yes">Yes — project cannot proceed without these breakers</option>
-                    <option value="No">No — net new purchases could support the schedule</option>
-                  </select>
-                </div>
-              </div>
+            {/* Pending section */}
+            <div className="section-row">
+              <div className="section-title">Pending Review</div>
+              <span className="count-pill amber">{loading?"…":pending.length} request{pending.length!==1?"s":""}</span>
+              {!loading && pending.length===0 && <span style={{ fontSize:12, color:"#94A3B8" }}>— All caught up</span>}
             </div>
 
-            {/* Section B */}
-            <div className="bmcd-card">
-              <div className="bmcd-card-hdr">
-                <div className="bmcd-card-icon">
-                  <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" stroke="#0049CD" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                </div>
-                <div>
-                  <div className="bmcd-card-title">Breaker Selection</div>
-                  <div className="bmcd-card-sub">Add one or more delivery slots, then select units from each — queue positions available for pending breakers</div>
-                </div>
-                <span className="bmcd-step-tag">STEP 02</span>
-              </div>
+            {loading && <div className="loading-state">Loading requests from Monday.com…</div>}
 
-              {/* Status legend */}
-              <div className="legend">
-                {[["#1A9B5A","Available — open for reservation"],["#D97706","Pending Review — request in committee"],["#1D4ED8","Pending Reservation — awaiting customer PO"],["#991B1B","Reserved — no longer selectable"]].map(([color,label])=>(
-                  <div key={color} className="legend-item">
-                    <div className="legend-dot" style={{ background:color }}/>
-                    <span>{label}</span>
+            {!loading && pending.length===0 && (
+              <div className="empty-state">No pending requests at this time.</div>
+            )}
+
+            {pending.map(req => {
+              const as = actionState[req.id]||{};
+              const capOk = req.capacityCheck==="Sufficient";
+              return (
+                <div key={req.id} className="req-card"
+                  style={{ borderLeft:`4px solid ${as.done?(as.outcome==="approved"?"#1A9B5A":"#DC2626"):"#E6A000"}` }}>
+
+                  {/* Card top */}
+                  <div className="req-card-top">
+                    <div>
+                      <div className="req-opp">{req.opportunityNum||req.name}</div>
+                      <div className="req-proj">{req.projectName} &mdash; <span className="req-client">{req.clientName}</span></div>
+                    </div>
+                    <div style={{ display:"flex", gap:8, flexShrink:0, flexWrap:"wrap", justifyContent:"flex-end" }}>
+                      <span className="pill pill-pending">Pending Review</span>
+                      {req.capacityCheck && (
+                        <span className={`pill ${capOk?"pill-cap-ok":"pill-cap-warn"}`}>{req.capacityCheck}</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Meta grid */}
+                  <div className="meta-grid">
+                    {[
+                      ["Requester",        req.requesterName||"—"],
+                      ["Est. Project Value",req.estimatedValue?`$${Number(req.estimatedValue).toLocaleString()}`:"—"],
+                      ["Breakers Enable",   req.breakersEnable||"—"],
+                      ["Drop-Dead Date",    req.dropDeadDate||"—"],
+                      ["Qty Requested",     `${req.quantityNeeded} unit${req.quantityNeeded!==1?"s":""}`],
+                      ["Units Selected",    `${req.breakerIds.length} unit${req.breakerIds.length!==1?"s":""}`],
+                    ].map(([k,v])=>(
+                      <div key={k}>
+                        <div className="meta-lbl">{k}</div>
+                        <div className="meta-val">{v}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Breaker units */}
+                  <div className="breaker-section">
+                    <div className="breaker-lbl">Requested Breaker Units</div>
+                    {req.breakers.length===0 ? (
+                      <div style={{ fontSize:12, color:"#94A3B8" }}>No breaker details available</div>
+                    ) : req.breakers.map(b => {
+                      const isAvail = b.status==="Available";
+                      const isResv  = b.status==="Reserved";
+                      return (
+                        <div key={b.id} className={`breaker-row ${isAvail?"avail":isResv?"reserved-state":"unknown"}`}>
+                          <div style={{ flex:1 }}>
+                            <div className="breaker-name">{b.name}</div>
+                            <div className="breaker-meta-text">
+                              {[b.voltage&&`${b.voltage}kV`, b.manufacturer, b.deliveryDate&&`Delivery: ${b.deliveryDate}`].filter(Boolean).join(" · ")}
+                            </div>
+                          </div>
+                          <span className={`b-pill ${isAvail?"g":isResv?"r":"u"}`}>{b.status||"Unknown"}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Actions / result */}
+                  {as.done ? (
+                    as.outcome==="approved" ? (
+                      <div className="approved-banner">
+                        <div className="banner-icon" style={{ background:"#DCFCE7" }}>
+                          <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" stroke="#166534" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        </div>
+                        <div>
+                          <div className="banner-title g">Approved — breakers moved to Pending Reservation. Mark as Reserved once the customer provides a PO.</div>
+                          {as.error && <div className="banner-warn">Completed with warnings: {as.error}</div>}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="denied-banner">
+                        <div className="banner-icon" style={{ background:"#FEE2E2" }}>
+                          <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" stroke="#991B1B" strokeWidth="2.5" strokeLinecap="round"/></svg>
+                        </div>
+                        <div>
+                          <div className="banner-title r">Denied — request closed</div>
+                          <div className="banner-sub">A comment has been posted on the Monday.com item if a reason was provided.</div>
+                        </div>
+                      </div>
+                    )
+                  ) : (
+                    <div className="action-bar">
+                      {as.error && <div className="err-box" style={{ width:"100%", marginBottom:0 }}>{as.error}</div>}
+                      <button onClick={()=>handleApprove(req)} disabled={!!as.working} className="btn-approve">
+                        {as.working ? "Processing…" : "Approve"}
+                      </button>
+                      <button onClick={()=>{setDenyTarget(req);setDenyReason("");}} disabled={!!as.working} className="btn-deny">
+                        Deny
+                      </button>
+                      <a href={`https://burnsmcd-inc.monday.com/boards/${REQUESTS_BOARD_ID}`}
+                        target="_blank" rel="noreferrer" className="btn-view-link">
+                        View in Monday.com →
+                      </a>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+            {/* Queue section — backup requests, no action needed */}
+            {queued.length > 0 && (
+              <div style={{ marginTop:28 }}>
+                <div className="section-row">
+                  <div className="section-title">Queue</div>
+                  <span className="count-pill" style={{ background:"#F1F5F9", color:"#475569" }}>{queued.length} backup request{queued.length!==1?"s":""}</span>
+                </div>
+                <div style={{ background:"#FFFBEB", border:"1px solid #FDE68A", borderRadius:10, padding:"12px 16px", marginBottom:14, fontSize:12, color:"#92400E", lineHeight:1.6 }}>
+                  <strong>No action required.</strong> These requests are backups in case a primary request falls through. If the original requestor does not receive a customer PO, notify the next person in queue and approve their request at that time.
+                </div>
+                {queued.map(req => (
+                  <div key={req.id} className="req-card" style={{ borderLeft:"4px solid #D97706", opacity:0.9 }}>
+                    <div className="req-card-top">
+                      <div>
+                        <div className="req-opp">{req.opportunityNum||req.name}</div>
+                        <div className="req-proj">{req.projectName} &mdash; <span className="req-client">{req.clientName}</span></div>
+                      </div>
+                      <div style={{ display:"flex", gap:8, flexShrink:0 }}>
+                        <span className="pill" style={{ background:"#FEF3C7", color:"#92400E" }}>In Queue</span>
+                        {req.capacityCheck && <span className={`pill ${req.capacityCheck==="Sufficient"?"pill-cap-ok":"pill-cap-warn"}`}>{req.capacityCheck}</span>}
+                      </div>
+                    </div>
+                    <div className="meta-grid">
+                      {[
+                        ["Requester",        req.requesterName||"—"],
+                        ["Est. Project Value",req.estimatedValue?`$${Number(req.estimatedValue).toLocaleString()}`:"—"],
+                        ["Breakers Enable",   req.breakersEnable||"—"],
+                        ["Drop-Dead Date",    req.dropDeadDate||"—"],
+                        ["Qty Requested",     `${req.quantityNeeded} unit${req.quantityNeeded!==1?"s":""}`],
+                        ["Opportunity #",     req.opportunityNum||"—"],
+                      ].map(([k,v])=>(
+                        <div key={k}><div className="meta-lbl">{k}</div><div className="meta-val">{v}</div></div>
+                      ))}
+                    </div>
+                    <div className="breaker-section">
+                      <div className="breaker-lbl">Queued Breaker Units</div>
+                      {req.breakers.map(b => {
+                        const ss = b.status==="Pending Review"?{color:"#92400E",bg:"#FEF3C7"}:b.status==="Pending Reservation"?{color:"#1D4ED8",bg:"#DBEAFE"}:{color:"#64748B",bg:"#F1F5F9"};
+                        return (
+                          <div key={b.id} className="breaker-row unknown">
+                            <div style={{ flex:1 }}>
+                              <div className="breaker-name">{b.name}</div>
+                              <div className="breaker-meta-text">{[b.voltage&&`${b.voltage}kV`,b.manufacturer,b.deliveryDate&&`Delivery: ${b.deliveryDate}`].filter(Boolean).join(" · ")}</div>
+                            </div>
+                            <span className="b-pill" style={{ color:ss.color, background:ss.bg }}>{b.status||"Unknown"}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="action-bar">
+                      <span style={{ fontSize:12, color:"#94A3B8", fontStyle:"italic" }}>Awaiting outcome of primary request — no action needed at this time.</span>
+                      <a href={`https://burnsmcd-inc.monday.com/boards/${REQUESTS_BOARD_ID}`} target="_blank" rel="noreferrer" className="btn-view-link">View in Monday.com →</a>
+                    </div>
                   </div>
                 ))}
               </div>
+            )}
 
-              {/* Add-a-line picker */}
-              <label className="bmcd-lbl" style={{ marginBottom:6 }}>Add a Delivery Slot / PO Line<span className="bmcd-req">*</span></label>
-              <select value={pickerValue} onChange={e=>addLine(e.target.value)}
-                className="std-inp" style={{ fontFamily:"monospace", fontSize:12, marginBottom:4 }}>
-                <option value="">{addedLineIds.length ? "Add another delivery slot…" : "Choose a delivery slot…"}</option>
-                {VOLT_GROUPS.map(({label,key})=>{
-                  const lines = poLines.filter(l=>String(l.voltage).trim()===key && !addedLineIds.includes(l.id));
-                  if (!lines.length) return null;
+            {/* Pending Reservation — awaiting customer PO */}
+            {history.filter(r=>r.status==="Done" && r.breakers.some(b=>b.status==="Pending Reservation")).length > 0 && (
+              <div style={{ marginTop:28 }}>
+                <div className="section-row">
+                  <div className="section-title">Pending Reservation</div>
+                  <span className="count-pill" style={{ background:"#DBEAFE", color:"#1D4ED8" }}>Awaiting Customer PO</span>
+                </div>
+                {history.filter(r=>r.status==="Done" && r.breakers.some(b=>b.status==="Pending Reservation")).map(req=>{
+                  const mrs = markReservedState[req.id]||{};
                   return (
-                    <optgroup key={key} label={label}>
-                      {lines.map(l=>(<option key={l.id} value={l.id}>{lineOptionLabel(l)}</option>))}
-                    </optgroup>
-                  );
-                })}
-                {poLines.filter(l=>!["145","245","362"].includes(String(l.voltage).trim()) && !addedLineIds.includes(l.id)).map(l=>(
-                  <option key={l.id} value={l.id}>{lineOptionLabel(l)}</option>
-                ))}
-              </select>
-              <div style={{ fontSize:11, color:"#94A3B8", marginBottom:4 }}>You can add several PO lines and select units from each. Selections are kept when you add or collapse lines.</div>
-
-              {addedLines.length>0 && (
-                <div style={{ marginTop:14 }}>
-                  {/* Overall banner */}
-                  {(()=>{
-                    let bg,bc,color,msg;
-                    if (selectedIds.length===0){bg="#FFFBEB";bc="#FDE68A";color="#D97706";msg="Select the units you need from the line(s) below — green units are open, amber/blue units have pending requests but can be queued.";}
-                    else{bg="#E6F9EE";bc="#6DD19A";color="#1A9B5A";msg=`${selectedIds.length} unit${selectedIds.length!==1?"s":""} selected across ${linesWithSelection.length} PO line${linesWithSelection.length!==1?"s":""}.${hasQueueItems?" Some are in queue — you will be placed in line for committee review.":""}`;}
-                    return <div style={{ background:bg, border:`1px solid ${bc}`, borderRadius:8, padding:"9px 14px", marginBottom:12, fontSize:12, color, fontWeight:500 }}>{msg}</div>;
-                  })()}
-
-                  {hasQueueItems && (
-                    <div className="queue-notice">
-                      <strong>Queue Notice:</strong> One or more of your selected breakers already has a pending request. Submitting will place you in the Monday.com queue. If the original request falls through, the committee will allocate these breakers to the next in line automatically.
-                    </div>
-                  )}
-
-                  {addedLines.map(line=>{
-                    const lineSubs   = subitemsByLine[line.id] || [];
-                    const selectable = lineSubs.filter(s=>!LOCKED_STATUSES.includes(s.status));
-                    const locked     = lineSubs.filter(s=>LOCKED_STATUSES.includes(s.status));
-                    const selIds     = selectable.map(s=>s.id);
-                    const lineSelCount = selIds.filter(id=>selectedIds.includes(id)).length;
-                    return (
-                      <div key={line.id} style={{ border:"1.5px solid #B4C4D4", borderRadius:10, padding:12, marginBottom:14, background:"#FCFDFE" }}>
-                        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, marginBottom:6 }}>
-                          <div style={{ fontSize:13, fontWeight:700, color:"#002D59" }}>
-                            {line.name}
-                            <span style={{ fontWeight:400, color:"#94A3B8", fontSize:11, marginLeft:8 }}>
-                              {[line.voltage&&`${line.voltage}kV`, line.manufacturer, line.deliveryDate&&`Delivery ${line.deliveryDate}`].filter(Boolean).join(" · ")}
-                            </span>
-                          </div>
-                          <button type="button" onClick={()=>removeLine(line.id)} title="Remove this PO line (clears its selections)"
-                            style={{ fontSize:11, color:"#DC2626", background:"none", border:"1px solid #FECACA", borderRadius:6, padding:"3px 9px", cursor:"pointer", fontWeight:600, flexShrink:0 }}>
-                            Remove line
-                          </button>
+                    <div key={req.id} className="req-card" style={{ borderLeft:"4px solid #1D4ED8" }}>
+                      <div className="req-card-top">
+                        <div>
+                          <div className="req-opp">{req.opportunityNum||req.name}</div>
+                          <div className="req-proj">{req.projectName} &mdash; <span className="req-client">{req.clientName}</span></div>
                         </div>
-
-                        <div className="cap-wrap">
-                          <div className="cap-row">
-                            <span>Slot Availability</span>
-                            <span style={{ color:"#1A9B5A", fontWeight:700 }}>{selectable.length} of {lineSubs.length} selectable · {lineSelCount} selected</span>
-                          </div>
-                          <div className="cap-track">
-                            <div className="cap-fill" style={{ width:`${lineSubs.length>0?Math.round((selectable.length/lineSubs.length)*100):0}%`, background:"linear-gradient(90deg,#0049CD,#0066FF)" }}/>
-                          </div>
-                        </div>
-
-                        {selectable.length===0 && (
-                          <div style={{ background:"#FEF2F2", border:"1px solid #FECACA", borderRadius:8, padding:"9px 14px", marginBottom:8, fontSize:12, color:"#DC2626", fontWeight:500 }}>
-                            No selectable breakers on this line. All units are Reserved or Delivered.
-                          </div>
-                        )}
-
-                        {selectable.length > 0 && (
-                          <div style={{ border:"1px solid #D4DCE6", borderRadius:8, overflow:"hidden", marginBottom:8, background:"#fff" }}>
-                            <div style={{ background:"#F0F4F8", padding:"7px 14px", fontSize:9, fontWeight:700, color:"#4D6680", letterSpacing:".1em", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-                              <span>SELECTABLE UNITS — SELECT ALL YOU NEED</span>
-                              <span style={{ fontWeight:400, color:"#94A3B8" }}>{lineSelCount}/{selectable.length} selected</span>
-                            </div>
-                            {selectable.length > 1 && (
-                              <div style={{ padding:"7px 14px", borderBottom:"1px solid #D4DCE6", display:"flex", gap:12, background:"#fff" }}>
-                                <button type="button" onClick={()=>selectAllIn(selIds)} style={{ fontSize:11, color:"#0049CD", background:"none", border:"none", cursor:"pointer", padding:0, fontWeight:600 }}>Select all {selectable.length}</button>
-                                <span style={{ color:"#D4DCE6" }}>|</span>
-                                <button type="button" onClick={()=>clearIn(selIds)} style={{ fontSize:11, color:"#94A3B8", background:"none", border:"none", cursor:"pointer", padding:0 }}>Clear</button>
-                              </div>
-                            )}
-                            {selectable.map(b=>{
-                              const checked = selectedIds.includes(b.id);
-                              const ss = statusStyle(b.status);
-                              return (
-                                <label key={b.id} className={biClass(b.status, checked)} style={{ display:"flex" }}>
-                                  <div className={cboxClass(b.status, checked)}>
-                                    {checked && <span style={{ color:"#fff", fontSize:11, fontWeight:700 }}>✓</span>}
-                                  </div>
-                                  <input type="checkbox" checked={checked} onChange={()=>toggle(b.id)} style={{ display:"none" }}/>
-                                  <div style={{ flex:1 }}>
-                                    <div style={{ fontWeight:600, color:"#002D59", fontSize:13 }}>{b.name}</div>
-                                    <div style={{ fontSize:11, color:"#94A3B8", marginTop:1 }}>
-                                      {[b.voltage&&`${b.voltage}kV`, b.manufacturer, b.deliveryDate&&`Delivery: ${b.deliveryDate}`].filter(Boolean).join(" · ")}
-                                    </div>
-                                  </div>
-                                  <span style={{ fontSize:10, fontWeight:700, color:ss.color, background:ss.bg, padding:"2px 8px", borderRadius:20, flexShrink:0, alignSelf:"center" }}>{ss.label}</span>
-                                </label>
-                              );
-                            })}
-                          </div>
-                        )}
-
-                        {locked.length > 0 && (
-                          <details style={{ marginTop:8 }}>
-                            <summary style={{ fontSize:11, color:"#94A3B8", cursor:"pointer", padding:"3px 0" }}>
-                              {locked.length} locked unit{locked.length!==1?"s":""} on this line (Reserved or Delivered — not selectable)
-                            </summary>
-                            <div style={{ border:"1px solid #D4DCE6", borderRadius:8, marginTop:6, overflow:"hidden", opacity:.5 }}>
-                              {locked.map((b,i)=>{
-                                const ss = statusStyle(b.status);
-                                return (
-                                  <div key={b.id} style={{ display:"flex", alignItems:"center", gap:11, padding:"10px 14px", borderBottom:i<locked.length-1?"1px solid #E8EDF4":"none" }}>
-                                    <div style={{ width:18, flexShrink:0 }}/>
-                                    <div style={{ flex:1 }}>
-                                      <div style={{ fontWeight:500, color:"#94A3B8", fontSize:12 }}>{b.name}</div>
-                                      <div style={{ fontSize:11, color:"#B4C4D4" }}>{[b.voltage&&`${b.voltage}kV`,b.manufacturer].filter(Boolean).join(" · ")}</div>
-                                    </div>
-                                    <span style={{ fontSize:10, fontWeight:700, color:ss.color, background:ss.bg, padding:"2px 8px", borderRadius:20 }}>{ss.label}</span>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </details>
+                        <span className="pill" style={{ background:"#DBEAFE", color:"#1D4ED8" }}>Pending Reservation</span>
+                      </div>
+                      <div className="meta-grid">
+                        <div><div className="meta-lbl">Requester</div><div className="meta-val">{req.requesterName||"—"}</div></div>
+                        <div><div className="meta-lbl">Opportunity #</div><div className="meta-val">{req.opportunityNum||"—"}</div></div>
+                        <div><div className="meta-lbl">Units</div><div className="meta-val">{req.breakerIds.length} unit{req.breakerIds.length!==1?"s":""}</div></div>
+                      </div>
+                      <div className="action-bar">
+                        {mrs.done ? (
+                          <div style={{ color:"#1A9B5A", fontWeight:600, fontSize:12 }}>✓ Marked as Reserved — breakers are now fully locked.</div>
+                        ) : (
+                          <>
+                            {mrs.error && <div className="err-box" style={{ width:"100%", marginBottom:0 }}>{mrs.error}</div>}
+                            <button onClick={()=>handleMarkReserved(req)} disabled={!!mrs.working}
+                              style={{ background:mrs.working?"#94A3B8":"#002D59", color:"#E6F001", border:"none", borderRadius:7, padding:"10px 22px", fontSize:13, fontWeight:700, cursor:mrs.working?"not-allowed":"pointer" }}>
+                              {mrs.working ? "Processing…" : "Mark as Reserved — Customer PO Received"}
+                            </button>
+                            <span style={{ fontSize:11, color:"#94A3B8", marginLeft:4 }}>Click when customer PO is confirmed</span>
+                          </>
                         )}
                       </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Section C — Notes */}
-            <div className="bmcd-card">
-              <div className="bmcd-card-hdr">
-                <div className="bmcd-card-icon">
-                  <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path d="M4 5h16M4 10h16M4 15h10" stroke="#0049CD" strokeWidth="1.8" strokeLinecap="round"/></svg>
-                </div>
-                <div>
-                  <div className="bmcd-card-title">Notes for the Review Committee</div>
-                  <div className="bmcd-card-sub">Optional — add context that will help the committee evaluate your request</div>
-                </div>
-                <span className="bmcd-step-tag">STEP 03</span>
+                    </div>
+                  );
+                })}
               </div>
-              <label className="bmcd-lbl">Additional Comments / Notes</label>
-              <textarea value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} className="std-inp" rows={5} maxLength={2000}
-                style={{ resize:"vertical", lineHeight:1.5 }}
-                placeholder="e.g. Why these particular slots, schedule drivers, customer commitments, flexibility on delivery dates, how units are split across projects…"/>
-              <div style={{ textAlign:"right", fontSize:10, color:"#94A3B8", marginTop:4 }}>{form.notes.length}/2000</div>
-            </div>
+            )}
 
-            {/* Submit */}
-            <div className="submit-zone">
-              {submitErr && <div className="err-box" style={{ marginBottom:14 }}>{submitErr}</div>}
-              <div className="submit-inner">
-                <div className="submit-text">
-                  <strong>Ready to submit.</strong> Your request for {selectedIds.length||"your"} breaker unit{selectedIds.length!==1?"s":""}{linesWithSelection.length?` across ${linesWithSelection.length} PO line${linesWithSelection.length!==1?"s":""} (${lineSummary})`:""} will be routed to the BSF Review Committee for review. Please check your email for submission details and next steps.
+            {/* History */}
+            {history.length > 0 && (
+              <div style={{ marginTop:28 }}>
+                <div className="section-row">
+                  <div className="section-title">Recent Decisions</div>
+                  <span className="count-pill gray">{history.length} record{history.length!==1?"s":""}</span>
                 </div>
-                <button onClick={handleSubmit} disabled={!isValid||submitting}
-                  className={isValid&&!submitting?"submit-btn-active":"submit-btn-dis"}>
-                  {submitting?"Submitting…":isValid?`Submit Request — ${selectedIds.length} Unit${selectedIds.length!==1?"s":""}`:"Submit Request"}
-                </button>
+                {history.map(req=>(
+                  <div key={req.id} className="hist-card"
+                    style={{ borderLeft:`4px solid ${req.status==="Done"?"#1A9B5A":"#DC2626"}` }}>
+                    <div>
+                      <div className="hist-opp">{req.opportunityNum||req.name}</div>
+                      <div className="hist-meta">{req.projectName} &mdash; {req.clientName} &mdash; {req.breakerIds.length} unit{req.breakerIds.length!==1?"s":""}</div>
+                    </div>
+                    <span className={`pill ${req.status==="Done"?"pill-approved":"pill-denied"}`}>
+                      {req.status==="Done" ? "Approved" : "Denied"}
+                    </span>
+                  </div>
+                ))}
               </div>
-              {!isValid && (
-                <div style={{ textAlign:"center", fontSize:11, color:"rgba(255,255,255,.4)", marginTop:12 }}>
-                  Complete all required fields and select at least one breaker unit to enable submission.
-                </div>
-              )}
-            </div>
+            )}
 
-            <div className="bmcd-footer">
+            <div className="bmcd-footer" style={{ marginTop:32 }}>
               BURNS &amp; McDONNELL &nbsp;·&nbsp; BREAKER SLOT PROGRAM &nbsp;·&nbsp; CONFIDENTIAL — INTERNAL USE ONLY
             </div>
           </div>
+
+          {/* Deny modal */}
+          {denyTarget && (
+            <div className="modal-overlay">
+              <div className="modal-box">
+                <div style={{ width:36, height:36, background:"#FEE2E2", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", marginBottom:14 }}>
+                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" stroke="#DC2626" strokeWidth="2.5" strokeLinecap="round"/></svg>
+                </div>
+                <div className="modal-title">Deny Request</div>
+                <div className="modal-body">
+                  Denying <strong>{denyTarget.opportunityNum||denyTarget.name}</strong>. Add an optional reason — it will be posted as a comment on the Monday.com item so the requester can see it.
+                </div>
+                <label className="bmcd-lbl">Reason (optional)</label>
+                <textarea
+                  value={denyReason}
+                  onChange={e=>setDenyReason(e.target.value)}
+                  placeholder="e.g. Insufficient project value to justify slot reservation at this stage."
+                  rows={3}
+                  className="modal-textarea"/>
+                <div className="modal-actions">
+                  <button onClick={()=>handleDeny(denyTarget,denyReason)} className="modal-confirm">Confirm Denial</button>
+                  <button onClick={()=>{setDenyTarget(null);setDenyReason("");}} className="modal-cancel">Cancel</button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       );
     }
