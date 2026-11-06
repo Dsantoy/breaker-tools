@@ -169,9 +169,9 @@
 
     // Assumed net margins for the illustrative net-income scenarios.
     margins: [
-      { label: "Low", pct: 5 },
-      { label: "Base", pct: 8 },
-      { label: "High", pct: 12 },
+      { label: "Low", pct: 12 },
+      { label: "Base", pct: 16 },
+      { label: "High", pct: 20 },
     ],
     baseMarginIndex: 1,
 
@@ -705,7 +705,8 @@
 
     /* ---- net income ---- */
     var scen = cfg.margins.map(function (m) {
-      var a = approvedVal * m.pct / 100, r = reviewVal * m.pct / 100;
+      // Net income is tied to APPROVED requests only (under-review requests excluded).
+      var a = approvedVal * m.pct / 100, r = 0;
       return { label: m.label, pct: m.pct, approved: a, review: r, total: a + r };
     });
     var base = scen[cfg.baseMarginIndex] || scen[0];
@@ -744,7 +745,7 @@
       kpis: {
         total: total, mfrText: mfrText, committed: committed, committedPct: pct(committed, total), active: active.length,
         approvedCount: approved.length, reviewCount: review.length, totalVal: totalVal, approvedVal: approvedVal, reviewVal: reviewVal,
-        net: base, baseLabel: "Base case, " + base.pct + "% margin*",
+        net: base, baseLabel: "Approved only, " + base.pct + "% margin*",
       },
       counts: cnt, total: total, snapshot: snapshot, classes: classes, fullLines: fullLinesAll, uncommitted: uncommitted,
       pipeline: pipeline, observations: obs, upcoming: upcoming, actions: actions, note: notesNote,
@@ -978,7 +979,6 @@
       var sc = m.scenarios, maxT = Math.max.apply(null, sc.map(function (s) { return s.total / 1e6; }).concat([1]));
       var base = 568, scale = 176 / maxT, bw = 62, xs = [878, 990, 1098];
       rect(840, 369, 11, 8, C.green); text("Approved (" + m.fmtM(m.kpis.approvedVal) + ")", 857, 377, 10, {});
-      rect(840, 384, 11, 8, C.orange); text("Under review (" + m.fmtM(m.kpis.reviewVal) + ")", 857, 392, 10, {});
       sc.forEach(function (s, i) {
         var cx = xs[i] || (878 + i * 110), ha = s.approved / 1e6 * scale, hr = s.review / 1e6 * scale;
         rect(cx - bw / 2, base - ha, bw, ha, C.green);
@@ -1026,7 +1026,7 @@
     })();
 
     // footnotes
-    text("*Illustrative only: net income = assumed net margin (" + m.marginText.replace(/%/g, "%") + ") applied to estimated project value. Monday.com contains no net income data; replace with finance-approved margins.", 47, 884, 10, { font: FI, color: C.mute });
+    text("*Illustrative only: net income = assumed net margin (" + m.marginText.replace(/%/g, "%") + ") applied to approved requests only (under-review requests excluded). Monday.com contains no net income data; replace with finance-approved margins.", 47, 884, 10, { font: FI, color: C.mute });
     var rn = m.reviewNames.length ? " " + m.fmtM(m.kpis.reviewVal) + " under review (" + m.reviewNames.join(", ") + ") is not yet approved." : "";
     text("Source: Monday.com Breaker Slot Program Workspace, pulled live " + m.generated.dateText + ". Project values are estimates." + rn, 47, 898, 10, { font: FI, color: C.mute });
 
