@@ -169,32 +169,9 @@
    * Edit these when they change; everything else is live.
    * ------------------------------------------------------------------ */
   var REPORT_CONFIG = {
-    // Date of the previous report. "Commitments rose from X to Y since the
-    // <date> report" compares live data against requests created on/before it.
-    baselineDate: "2026-10-16",
-
-    // Assumed net margins for the illustrative net-income scenarios.
-    margins: [
-      { label: "Low", pct: 12 },
-      { label: "Base", pct: 16 },
-      { label: "High", pct: 20 },
-    ],
-    baseMarginIndex: 1,
-
-    // Initial-drawing due dates to BMcD come from the Master Tracker workbook,
-    // not Monday. Add/adjust entries here (PO line numbers + date).
-    drawings: [
-      { mfr: "Hitachi", label: "Hitachi initial drawings", lines: range(18, 29), date: "2026-11-09" },
-      { mfr: "GE", label: "GE initial drawings", lines: [1], date: "2027-03-29" },
-    ],
-
-    // Optional free-text paragraph shown under the overview (leave "" to omit).
-    programNote:
-      "Now that the program is in flight, BMcD is working with Wesco to request additional flexibility from GE and Hitachi to enable even more projects. Examples include pulling 4 slots forward.",
-
-    // No Monday columns for these two Program Snapshot rows.
-    manufacturingStatusSuffix: "Booked (none yet in production)",
-    unitsOnHold: 0,
+    // Reports use Monday.com data ONLY. No hand-maintained dates, margins or notes.
+    // Growth comparisons look back this many days (based on request created dates).
+    baselineDays: 30,
 
     // Days thresholds for deadline shading / alerts.
     redDays: 30,
@@ -272,7 +249,7 @@
     for (var k2 in opts) if (opts[k2] != null) cfg[k2] = opts[k2];
     var todayStr = opts.today || localToday();
     var T = dn(todayStr);
-    var baseN = dn(cfg.baselineDate);
+    var baseN = T - cfg.baselineDays;
 
     /* ---- units & lines ---- */
     var slotById = {}, lines = {};
@@ -460,17 +437,9 @@
     var pastDue = approved.filter(function (r) { return r.dropDead != null && r.dropDead < T && poOpen(r); }).sort(function (a, b) { return a.dropDead - b.dropDead; });
     var soon = approved.filter(function (r) { return r.dropDead != null && r.dropDead >= T && r.dropDead - T <= cfg.soonDays && poOpen(r); }).sort(function (a, b) { return a.dropDead - b.dropDead; });
 
-    /* ---- drawings ---- */
-    var drawings = cfg.drawings.map(function (d) {
-      var dd = dn(d.date);
-      var qty = sum(d.lines, function (n) { return lines[n] ? lines[n].qty : 0; });
-      return { mfr: d.mfr, label: d.label, lines: d.lines, date: dd, days: dd - T, qty: qty };
-    }).filter(function (d) { return d.qty > 0; }).sort(function (a, b) { return a.date - b.date; });
-    var nextDrawing = drawings.filter(function (d) { return d.days >= -7; })[0] || null;
-    function drawingForLine(n) {
-      for (var i = 0; i < drawings.length; i++) if (drawings[i].lines.indexOf(n) >= 0) return drawings[i];
-      return null;
-    }
+    /* ---- drawings: no Monday.com source, so omitted from the reports ---- */
+    var drawings = [], nextDrawing = null;
+    function drawingForLine() { return null; }
 
     /* ---- capacity ---- */
     var avail = cnt["Available"];
@@ -512,17 +481,17 @@
     approved.forEach(function (r) { var c = r.customer || "Unknown"; custTotals[c] = custTotals[c] || { n: 0, qty: 0, val: 0 }; custTotals[c].n++; custTotals[c].qty += r.qty; custTotals[c].val += r.value; });
     var topCust = Object.keys(custTotals).sort(function (a, b) { return custTotals[b].val - custTotals[a].val; })[0];
     var growth = baseline.committed > 0 && (committed !== baseline.committed || active.length !== baseline.requests)
-      ? " Since the " + fmtMonthDay(baseN) + " report, commitments have " + (committed >= baseline.committed ? "risen" : "fallen") + " from " + baseline.committed + " to " + committed + " breakers (" + pct(committed, total) + "% of the program) and active requests from " + baseline.requests + " to " + active.length + "."
+      ? " Since " + fmtMonthDay(baseN) + " (" + cfg.baselineDays + " days ago), commitments have " + (committed >= baseline.committed ? "risen" : "fallen") + " from " + baseline.committed + " to " + committed + " breakers (" + pct(committed, total) + "% of the program) and active requests from " + baseline.requests + " to " + active.length + "."
       : "";
     var overview1 =
       (topCust ? cap(topCust) + " leads with " + custTotals[topCust].n + " approved " + plural(custTotals[topCust].n, "project") + " covering " + custTotals[topCust].qty + " breakers (" + fmtM(custTotals[topCust].val) + "). " : "") +
       "In total, " + approved.length + " approved " + plural(approved.length, "request") + " cover " + approvedQty + " breakers and " + fmtM(approvedVal) + " in estimated project value" +
       (reviewVal > 0 ? ", and another " + fmtM(reviewVal) + " is under review." : ".") + growth +
       " The near-term focus is converting approved requests into released customer POs" + firstPOText + ".";
-    var overview2 = cfg.programNote || "";
+    var overview2 = "";
 
     var boardIntro = (demandUp || (baseline.committed > 0 && committed > baseline.committed)
-      ? "Demand is " + (demandUp ? "accelerating" : "growing") + ": commitments rose from " + baseline.committed + " to " + committed + " breakers (" + pct(committed, total) + "% of the program) and active requests from " + baseline.requests + " to " + active.length + " since the " + fmtMonthDay(baseN) + " report."
+      ? "Demand is " + (demandUp ? "accelerating" : "growing") + ": commitments rose from " + baseline.committed + " to " + committed + " breakers (" + pct(committed, total) + "% of the program) and active requests from " + baseline.requests + " to " + active.length + " since " + fmtMonthDay(baseN) + " (" + cfg.baselineDays + " days ago)."
       : "Commitments stand at " + committed + " breakers (" + pct(committed, total) + "% of the program) across " + active.length + " active " + plural(active.length, "request") + ".") +
       " Near-term focus is converting approved requests into customer POs" + firstPOText + ".";
 
@@ -530,8 +499,7 @@
     var snapshot = [
       ["Total breakers", total + " breakers"],
       ["Manufacturers", mfrText],
-      ["Schedule health", onTrackUnits + " On Track | " + lateUnits + " Late | " + cfg.unitsOnHold + " On Hold"],
-      ["Manufacturing status", total + " " + cfg.manufacturingStatusSuffix],
+      ["Schedule health", onTrackUnits + " On Track | " + lateUnits + " Late"],
       ["Slot status", cnt["Available"] + " Available (" + pct(cnt["Available"], total) + "%) | " + cnt["Pending Review"] + " Pending Review (" + pct(cnt["Pending Review"], total) + "%) | " + cnt["Pending Reservation"] + " Pending Reservation (" + pct(cnt["Pending Reservation"], total) + "%) | " + cnt["Reserved"] + " Reserved"],
       ["Approved requests awaiting customer PO", awaiting.length + " " + plural(awaiting.length, "request") + ", " + awaitingQty + " breakers, " + fmtM(awaitingVal) + " estimated project value"],
       ["Requests under review", review.length + " " + plural(review.length, "request") + ", " + reviewQty + " breakers in review; " + fmtM(reviewVal) + " estimated project value"],
@@ -709,13 +677,12 @@
       actions.push("Decide how to position the remaining " + tight.v + " kV capacity (" + tight.avail + " breakers)" + (others.length ? " and the " + otherN + " uncommitted breakers at " + andJoin(others.map(function (c) { return c.v; })) + " kV" : "") + " with business development.");
     }
 
-    /* ---- net income ---- */
-    var scen = cfg.margins.map(function (m) {
-      // Net income is tied to APPROVED requests only (under-review requests excluded).
-      var a = approvedVal * m.pct / 100, r = 0;
-      return { label: m.label, pct: m.pct, approved: a, review: r, total: a + r };
-    });
-    var base = scen[cfg.baseMarginIndex] || scen[0];
+    /* ---- estimated value by status (Monday data only) ---- */
+    var valueBars = [
+      { label: "Awaiting PO", value: awaitingVal, color: "blue" },
+      { label: "PO received", value: Math.max(approvedVal - awaitingVal, 0), color: "green" },
+      { label: "Under review", value: reviewVal, color: "orange" },
+    ];
 
     /* ---- customers chart ---- */
     var cust = {};
@@ -742,7 +709,7 @@
     if (tight) att.push(tight.v + " kV capacity tightening: " + tight.avail + " breakers left" + (openAll.length ? "; " + andJoin(openAll.map(function (c) { return c.v + " kV fully open (" + c.total + ")"; })) : "") + ".");
     if (narrIssues.length) att.push(narrIssues.length + " Monday data " + plural(narrIssues.length, "issue") + " to correct (see Executive Summary).");
 
-    var notesNote = "Note: Finalized Tech Details Due dates on the Monday board match the Final Approval Due to MFG dates from the Master Tracker. They mark the 20% payment milestone and are not the customer PO drop-dead dates, which only show when the requestor expects the PO. Feedback-due dates come from the slot inventory board; initial-drawing dates come from the Master Tracker.";
+    var notesNote = "Note: All figures are pulled live from Monday.com. Finalized Tech Details Due dates mark the 20% payment milestone to Wesco and the customer's 30% milestone; the PO date shown for each request is that 30% milestone. Feedback-due dates come from the slot inventory board.";
 
     return {
       generated: { date: T, dateText: fmtLongDate(T), by: opts.reviewerEmail || "", at: raw.generatedAt || "" },
@@ -751,12 +718,11 @@
       kpis: {
         total: total, mfrText: mfrText, committed: committed, committedPct: pct(committed, total), active: active.length,
         approvedCount: approved.length, reviewCount: review.length, totalVal: totalVal, approvedVal: approvedVal, reviewVal: reviewVal,
-        net: base, baseLabel: "Approved only, " + base.pct + "% margin*",
+        awaitingVal: awaitingVal, awaitingQty: awaitingQty, awaitingCount: awaiting.length,
       },
       counts: cnt, total: total, snapshot: snapshot, classes: classes, fullLines: fullLinesAll, uncommitted: uncommitted,
       pipeline: pipeline, observations: obs, upcoming: upcoming, actions: actions, note: notesNote,
-      scenarios: scen, customers: custArr, attention: att, issues: issues.length,
-      marginText: cfg.margins.map(function (m) { return m.pct + "%"; }).join(" / "),
+      valueBars: valueBars, customers: custArr, attention: att, issues: issues.length,
       reviewNames: review.map(function (r) { return r.proj; }),
       cfg: { redDays: cfg.redDays, amberDays: cfg.amberDays },
       fmtM: fmtM,
@@ -819,7 +785,7 @@
     kids.push(para(fl, { before: 200, after: 80 }));
 
     kids.push(heading("Request Pipeline"));
-    kids.push(table([1296, 3456, 576, 576, 1008, 1584, 1440], ["Request", "Project / Customer", "Line", "Qty", "Est. Value", "PO Drop-Dead", "Status"],
+    kids.push(table([1296, 3456, 576, 576, 1008, 1584, 1440], ["Request", "Project / Customer", "Line", "Qty", "Est. Value", "30% Milestone", "Status"],
       m.pipeline.map(function (p) { return [p.opp, p.name, p.line, String(p.qty), p.value, p.po, p.status]; }),
       { fills: m.pipeline.map(function (p) { return p.pastDue ? "F8D7DA" : undefined; }) }));
 
@@ -827,7 +793,7 @@
     m.observations.forEach(function (t, i) { kids.push(para((i + 1) + ". " + t, { after: 80 })); });
 
     kids.push(heading("Upcoming Decisions and Deadlines"));
-    kids.push(para("Rows are listed by Finalized Tech Details Due date, which is the 20% payment milestone for each line. Customer PO drop-dead dates are from the Slot Reservation Requests board and show only when the requestor expects the PO. Feedback and drawing dates are from the Master Tracker and slot inventory. Shading reflects the nearest PO or feedback date in each row: red is past due or due within " + m.cfg.redDays + " days; amber falls within roughly " + m.cfg.amberDays + " days.", { after: 80 }));
+    kids.push(para("Rows are listed by Finalized Tech Details Due date, which is the 20% payment milestone for each line. The PO date shown for each request is its 30% customer-payment milestone, from the Slot Reservation Requests board. Feedback dates are from the slot inventory board. Shading reflects the nearest PO or feedback date in each row: red is past due or due within " + m.cfg.redDays + " days; amber falls within roughly " + m.cfg.amberDays + " days.", { after: 80 }));
     var upW = [1800, 1008, 4032, 3096];
     var upRows = m.upcoming.map(function (u) {
       return [
@@ -914,7 +880,7 @@
       { big: String(k.committed), l1: "Committed / in review", l2: k.committedPct + "% of program", accent: C.blue },
       { big: String(k.active), l1: "Active requests", l2: k.approvedCount + " approved, " + k.reviewCount + " in review", accent: C.blue },
       { big: m.fmtM(k.totalVal), l1: "Est. project value", l2: m.fmtM(k.approvedVal) + " approved + " + m.fmtM(k.reviewVal) + " review", accent: C.blue },
-      { big: m.fmtM(k.net.total), l1: "Potential net income", l2: k.baseLabel, accent: C.green },
+      { big: m.fmtM(k.awaitingVal), l1: "Awaiting customer PO", l2: k.awaitingCount + " " + (k.awaitingCount === 1 ? "request" : "requests") + ", " + k.awaitingQty + " breakers", accent: C.green },
     ];
     cards.forEach(function (c, i) {
       var x = 47 + i * 226.5, y = 177, w = 211, h = 98;
@@ -979,20 +945,16 @@
       rect(690, ly + 6, 11, 8, C.orange); text("Under review", 706, ly + 14, 10, {});
     })();
 
-    // panel 3: net income
-    panel(806, 305, 358, 314, "Potential net income scenarios ($M)*");
+    // panel 3: estimated value by status
+    panel(806, 305, 358, 314, "Estimated project value by status ($M)");
     (function () {
-      var sc = m.scenarios, maxT = Math.max.apply(null, sc.map(function (s) { return s.total / 1e6; }).concat([1]));
-      var base = 568, scale = 176 / maxT, bw = 62, xs = [878, 990, 1098];
-      rect(840, 369, 11, 8, C.green); text("Approved (" + m.fmtM(m.kpis.approvedVal) + ")", 857, 377, 10, {});
-      sc.forEach(function (s, i) {
-        var cx = xs[i] || (878 + i * 110), ha = s.approved / 1e6 * scale, hr = s.review / 1e6 * scale;
-        rect(cx - bw / 2, base - ha, bw, ha, C.green);
-        rect(cx - bw / 2, base - ha - hr, bw, hr, C.orange);
-        if (ha > 16) text(m.fmtM(s.approved), cx, base - ha / 2 + 4, 12, { font: FB, color: C.white, align: "center" });
-        if (hr > 16) text(m.fmtM(s.review), cx, base - ha - hr / 2 + 4, 12, { font: FB, color: C.white, align: "center" });
-        text(m.fmtM(s.total), cx, base - ha - hr - 7, 14, { font: FB, color: C.navy, align: "center" });
-        text(s.label + " (" + s.pct + "%)", cx, base + 17, 11.5, { color: C.text, align: "center" });
+      var bars = m.valueBars, maxV = Math.max.apply(null, bars.map(function (b) { return b.value / 1e6; }).concat([1]));
+      var base = 568, scale = 176 / maxV, bw = 62, xs = [878, 990, 1098];
+      bars.forEach(function (b, i) {
+        var cx = xs[i], h = b.value / 1e6 * scale;
+        if (h > 0) rect(cx - bw / 2, base - h, bw, h, C[b.color]);
+        text(m.fmtM(b.value), cx, base - h - 7, 14, { font: FB, color: C.navy, align: "center" });
+        text(b.label, cx, base + 17, 10.5, { color: C.text, align: "center" });
       });
       rect(836, base, 306, 1.4, "#222222");
     })();
@@ -1032,7 +994,7 @@
     })();
 
     // footnotes
-    text("*Illustrative only: net income = assumed net margin (" + m.marginText.replace(/%/g, "%") + ") applied to approved requests only (under-review requests excluded). Monday.com contains no net income data; replace with finance-approved margins.", 47, 884, 10, { font: FI, color: C.mute });
+    text("Estimated project values are as entered on each Slot Reservation Request in Monday.com. All figures are pulled live from Monday.com.", 47, 884, 10, { font: FI, color: C.mute });
     var rn = m.reviewNames.length ? " " + m.fmtM(m.kpis.reviewVal) + " under review (" + m.reviewNames.join(", ") + ") is not yet approved." : "";
     text("Source: Monday.com Breaker Slot Program Workspace, pulled live " + m.generated.dateText + ". Project values are estimates." + rn, 47, 898, 10, { font: FI, color: C.mute });
 
@@ -1066,6 +1028,13 @@
 
     function colVal(cvs, id) { return cvs?.find(c=>c.id===id)?.text || ""; }
     function colRaw(cvs, id) { const r=cvs?.find(c=>c.id===id)?.value; try{return r?JSON.parse(r):null;}catch{return null;} }
+
+    /* 70% milestone = earliest Delivery Date among a request's breaker units
+       (the 30% milestone — Finalized Tech Details Due — is saved on the request itself). */
+    function m70Of(req) {
+      const ds = (req.breakers||[]).map(b=>b.deliveryDate).filter(d=>/^\d{4}-\d{2}-\d{2}/.test(d||"")).map(d=>d.slice(0,10)).sort();
+      return ds[0] || "—";
+    }
 
     async function proxyGet(path) {
       const res = await fetch(PROXY_BASE_URL + path, { headers:{ "X-Proxy-Secret": PROXY_SHARED_SECRET } });
@@ -1104,6 +1073,43 @@
       const [reporting,   setReporting]   = useState(false);
       const [reportMsg,   setReportMsg]   = useState(null);
       const [selectedHist, setSelectedHist] = useState(null);
+      const [notice,        setNotice]        = useState(null);
+      const [promoteState,  setPromoteState]  = useState({});
+      const [releaseTarget, setReleaseTarget] = useState(null);
+      const [releaseReason, setReleaseReason] = useState("");
+      const [releasing,     setReleasing]     = useState(false);
+
+      /* ── Promote a queued request into review (units must be Available) ── */
+      const handlePromote = async req => {
+        setPromoteState(p=>({...p,[req.id]:{working:true,error:null}}));
+        try {
+          const result = await proxyPost("/reviewer-promote", { reviewerEmail, requestId:req.id });
+          if (!result.success) throw new Error(result.error || "Promote failed.");
+          setPromoteState(p=>({...p,[req.id]:{working:false,error:null}}));
+          setNotice({ ok:true, text:`${req.opportunityNum||req.name} moved from the queue into Pending Review.` + (result.errors?` Warnings: ${result.errors.join("; ")}`:"") });
+          setTimeout(()=>setNotice(null), 9000);
+          loadRequests();
+        } catch(e) {
+          setPromoteState(p=>({...p,[req.id]:{working:false,error:e.message}}));
+        }
+      };
+
+      /* ── Release an approved request whose customer PO fell through ── */
+      const handleRelease = async () => {
+        const req = releaseTarget; if (!req) return;
+        setReleasing(true);
+        try {
+          const result = await proxyPost("/reviewer-release", { reviewerEmail, requestId:req.id, reason:releaseReason });
+          if (!result.success) throw new Error(result.error || "Release failed.");
+          setReleaseTarget(null); setReleaseReason("");
+          setNotice({ ok:true, text:`${req.opportunityNum||req.name} released — ${result.released} unit${result.released!==1?"s":""} returned to Available. Any queued request for these units can now be promoted.` + (result.errors?` Warnings: ${result.errors.join("; ")}`:"") });
+          setTimeout(()=>setNotice(null), 12000);
+          loadRequests();
+        } catch(e) {
+          setReleaseTarget(null);
+          setNotice({ ok:false, text:"Release failed: "+e.message });
+        } finally { setReleasing(false); }
+      };
 
       /* Close decision-detail modal with Escape */
       useEffect(() => {
@@ -1317,6 +1323,9 @@
             {reportMsg && (
               <div className={`sync-msg ${reportMsg.ok?"ok":"fail"}`}>{reportMsg.text}</div>
             )}
+            {notice && (
+              <div className={`sync-msg ${notice.ok?"ok":"fail"}`}>{notice.text}</div>
+            )}
             {loadErr && <div className="err-box">{loadErr}</div>}
 
             {/* Pending section */}
@@ -1335,6 +1344,11 @@
             {pending.map(req => {
               const as = actionState[req.id]||{};
               const capOk = req.capacityCheck==="Sufficient";
+              /* Units already approved/reserved for someone else → approval is blocked */
+              const held = req.breakers.filter(b=>["Pending Reservation","Reserved"].includes(b.status) && (b.oppTag||"")!==(req.opportunityNum||""));
+              /* Other open requests (pending or queued) that claim any of the same units */
+              const myIds = new Set(req.breakerIds.map(String));
+              const overlaps = [...pending, ...queued].filter(o=>o.id!==req.id && o.breakerIds.some(id=>myIds.has(String(id))));
               return (
                 <div key={req.id} className="req-card"
                   style={{ borderLeft:`4px solid ${as.done?(as.outcome==="approved"?"#1A9B5A":"#DC2626"):"#E6A000"}` }}>
@@ -1359,7 +1373,8 @@
                       ["Requester",        req.requesterName||"—"],
                       ["Est. Project Value",req.estimatedValue?`$${Number(req.estimatedValue).toLocaleString()}`:"—"],
                       ["Breakers Enable",   req.breakersEnable||"—"],
-                      ["Drop-Dead Date",    req.dropDeadDate||"—"],
+                      ["30% Milestone (Tech Details)", req.dropDeadDate||"—"],
+                      ["70% Milestone (Delivery)",     m70Of(req)],
                       ["Qty Requested",     `${req.quantityNeeded} unit${req.quantityNeeded!==1?"s":""}`],
                       ["Units Selected",    `${req.breakerIds.length} unit${req.breakerIds.length!==1?"s":""}`],
                     ].map(([k,v])=>(
@@ -1392,6 +1407,18 @@
                     })}
                   </div>
 
+                  {/* Conflict warnings */}
+                  {!as.done && held.length>0 && (
+                    <div className="err-box" style={{ margin:"0 22px 12px" }}>
+                      <strong>Approval blocked:</strong> {held.length} of these units {held.length!==1?"are":"is"} already held by {[...new Set(held.map(b=>b.oppTag||"another request"))].join(", ")}. Deny this request — the requester stays queued behind the existing one.
+                    </div>
+                  )}
+                  {!as.done && overlaps.length>0 && (
+                    <div style={{ margin:"0 22px 12px", background:"#FFFBEB", border:"1px solid #FDE68A", color:"#92400E", borderRadius:8, padding:"10px 14px", fontSize:12, lineHeight:1.5 }}>
+                      <strong>Overlapping request:</strong> {overlaps.map(o=>`${o.opportunityNum||o.name} (${o.status==="In Queue"?"queued":"under review"})`).join(", ")} also {overlaps.length!==1?"claim":"claims"} some of these units. Approving this request moves the others to the queue automatically.
+                    </div>
+                  )}
+
                   {/* Actions / result */}
                   {as.done ? (
                     as.outcome==="approved" ? (
@@ -1418,7 +1445,7 @@
                   ) : (
                     <div className="action-bar">
                       {as.error && <div className="err-box" style={{ width:"100%", marginBottom:0 }}>{as.error}</div>}
-                      <button onClick={()=>handleApprove(req)} disabled={!!as.working} className="btn-approve">
+                      <button onClick={()=>handleApprove(req)} disabled={!!as.working||held.length>0} className="btn-approve">
                         {as.working ? "Processing…" : "Approve"}
                       </button>
                       <button onClick={()=>{setDenyTarget(req);setDenyReason("");}} disabled={!!as.working} className="btn-deny">
@@ -1461,7 +1488,8 @@
                         ["Requester",        req.requesterName||"—"],
                         ["Est. Project Value",req.estimatedValue?`$${Number(req.estimatedValue).toLocaleString()}`:"—"],
                         ["Breakers Enable",   req.breakersEnable||"—"],
-                        ["Drop-Dead Date",    req.dropDeadDate||"—"],
+                        ["30% Milestone (Tech Details)", req.dropDeadDate||"—"],
+                      ["70% Milestone (Delivery)",     m70Of(req)],
                         ["Qty Requested",     `${req.quantityNeeded} unit${req.quantityNeeded!==1?"s":""}`],
                         ["Opportunity #",     req.opportunityNum||"—"],
                       ].map(([k,v])=>(
@@ -1484,7 +1512,25 @@
                       })}
                     </div>
                     <div className="action-bar">
-                      <span style={{ fontSize:12, color:"#94A3B8", fontStyle:"italic" }}>Awaiting outcome of primary request — no action needed at this time.</span>
+                      {(() => {
+                        const free = req.breakers.length>0 && req.breakers.every(b=>b.status==="Available");
+                        const ps = promoteState[req.id]||{};
+                        const holders = [...new Set(req.breakers.filter(b=>b.status!=="Available").map(b=>b.oppTag).filter(Boolean))];
+                        return free ? (
+                          <>
+                            {ps.error && <div className="err-box" style={{ width:"100%", marginBottom:0 }}>{ps.error}</div>}
+                            <button onClick={()=>handlePromote(req)} disabled={!!ps.working}
+                              style={{ background:ps.working?"#94A3B8":"#0049CD", color:"#fff", border:"none", borderRadius:7, padding:"10px 22px", fontSize:13, fontWeight:700, cursor:ps.working?"not-allowed":"pointer" }}>
+                              {ps.working ? "Promoting…" : "Promote to Review"}
+                            </button>
+                            <span style={{ fontSize:11, color:"#166534" }}>Units are free — the earlier request is gone. Promote to put this one in front of reviewers.</span>
+                          </>
+                        ) : (
+                          <span style={{ fontSize:12, color:"#94A3B8", fontStyle:"italic" }}>
+                            Waiting on {holders.length?holders.join(", "):"the primary request"} — units are still held. Once that request is denied or released, you can promote this one.
+                          </span>
+                        );
+                      })()}
                       <a href={`https://burnsmcd-inc.monday.com/boards/${REQUESTS_BOARD_ID}`} target="_blank" rel="noreferrer" className="btn-view-link">View in Monday.com →</a>
                     </div>
                   </div>
@@ -1526,6 +1572,10 @@
                               {mrs.working ? "Processing…" : "Mark as Reserved — Customer PO Received"}
                             </button>
                             <span style={{ fontSize:11, color:"#94A3B8", marginLeft:4 }}>Click when customer PO is confirmed</span>
+                            <button onClick={()=>{setReleaseTarget(req);setReleaseReason("");}} disabled={!!mrs.working}
+                              style={{ marginLeft:"auto", background:"#fff", color:"#991B1B", border:"1.5px solid #FECACA", borderRadius:7, padding:"9px 16px", fontSize:12, fontWeight:700, cursor:"pointer" }}>
+                              Release — PO fell through
+                            </button>
                           </>
                         )}
                       </div>
@@ -1595,6 +1645,25 @@
             </div>
           )}
 
+          {/* Release modal */}
+          {releaseTarget && (
+            <div className="modal-overlay">
+              <div className="modal-box">
+                <div className="modal-title">Release Approved Request</div>
+                <div className="modal-body">
+                  Releasing <strong>{releaseTarget.opportunityNum||releaseTarget.name}</strong> returns its units to <strong>Available</strong>, clears the Opportunity # and requester on each unit, and closes the request. Use this only if the customer PO fell through. Units already marked Reserved are not touched. A comment is posted on the Monday.com item.
+                </div>
+                <label className="bmcd-lbl">Reason (optional)</label>
+                <textarea value={releaseReason} onChange={e=>setReleaseReason(e.target.value)} rows={3} className="modal-textarea"
+                  placeholder="e.g. Customer did not release the PO by the drop-dead date."/>
+                <div className="modal-actions">
+                  <button onClick={handleRelease} disabled={releasing} className="modal-confirm">{releasing?"Releasing…":"Confirm Release"}</button>
+                  <button onClick={()=>{setReleaseTarget(null);setReleaseReason("");}} disabled={releasing} className="modal-cancel">Cancel</button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Decision detail modal (read-only) */}
           {selectedHist && (() => {
             const h = selectedHist;
@@ -1608,7 +1677,8 @@
               ["Requester",          h.requesterName||"—"],
               ["Est. Project Value", h.estimatedValue?`$${Number(h.estimatedValue).toLocaleString()}`:"—"],
               ["Breakers Enable",    h.breakersEnable||"—"],
-              ["Drop-Dead Date",     h.dropDeadDate||"—"],
+              ["30% Milestone (Tech Details)", h.dropDeadDate||"—"],
+              ["70% Milestone (Delivery)",     m70Of(h)],
               ["Qty Requested",      h.quantityNeeded!=null?`${h.quantityNeeded} unit${h.quantityNeeded!==1?"s":""}`:"—"],
               ["Units Selected",     `${(h.breakerIds||[]).length} unit${(h.breakerIds||[]).length!==1?"s":""}`],
               ["Opportunity #",      h.opportunityNum||"—"],
