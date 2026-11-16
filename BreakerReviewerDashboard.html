@@ -862,7 +862,7 @@
     kids.push(para(fl, { before: 200, after: 80 }));
 
     kids.push(heading("Request Pipeline"));
-    kids.push(table([1150, 2700, 1350, 560, 520, 900, 1500, 1256], ["Request", "Project / Customer", "Requester", "Line", "Qty", "Est. Value", "Delivery Date", "Status"],
+    kids.push(table([1150, 2580, 1350, 560, 520, 1020, 1500, 1256], ["Request", "Project / Customer", "Requester", "Line", "Qty", "Est. Project Value", "Delivery Date", "Status"],
       m.pipeline.map(function (p) { return [p.opp, p.name, p.requester || "", p.line, String(p.qty), p.value, p.po, p.status]; }),
       { fills: m.pipeline.map(function (p) { return p.pastDue ? "F8D7DA" : undefined; }) }));
 
