@@ -267,7 +267,7 @@
       if (isNaN(ln) && u.parentId && slotById[u.parentId]) ln = slotById[u.parentId].poLineN;
       return {
         id: String(u.id), name: u.name, status: u.status || "Available", voltage: u.voltage, mfr: u.mfr,
-        opp: (u.opp || "").trim(), line: ln, techDue: dn(u.techDue), delivery: dn(u.delivery),
+        opp: (u.opp || "").trim(), line: ln, techDue: dn(u.techDue), delivery: dn(u.delivery), price: num(u.price),
       };
     });
     var unitById = {};
@@ -522,6 +522,34 @@
       };
     });
 
+    /* ---- milestone payments & PO value (all from Monday) ----
+       Unit Price comes from each breaker subitem. Customer pays:
+         30% on the Finalized Tech Details Due date (the 20% BMcD owes Wesco at that
+             milestone + the 10% BMcD already paid), and
+         70% on the Delivery Date. */
+    function usd(v) { return "$" + String(Math.round(v)).replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
+    var msTotals = { total: 0, m20: 0, m70: 0 };
+    var milestones = active.filter(function (r) { return r.units.length > 0; }).map(function (r) {
+      var us = r.units;
+      var total = sum(us, function (u) { return u.price || 0; });
+      function byDate(key, share) {
+        var g = {};
+        us.forEach(function (u) { var d = u[key]; var k = d == null ? "tbd" : String(d); g[k] = (g[k] || 0) + (u.price || 0) * share; });
+        return Object.keys(g).sort(function (a, b) { return a === "tbd" ? 1 : b === "tbd" ? -1 : a - b; })
+          .map(function (k) { return { date: k === "tbd" ? "TBD" : fmtFull(Number(k)), amount: usd(g[k]) }; });
+      }
+      var fb = uniq(us.map(function (u) { return lines[u.line] ? lines[u.line].feedbackDue : null; })
+        .filter(function (x) { return x != null; })).sort(function (a, b) { return a - b; })
+        .map(function (n) { return fmtFull(n); });
+      msTotals.total += total; msTotals.m20 += total * 0.3; msTotals.m70 += total * 0.7;
+      return {
+        opp: r.opp, name: r.proj + " / " + r.customer + (r.cat === "review" ? " (under review)" : ""),
+        total: usd(total), feedback: fb, m20: byDate("techDue", 0.3), m70: byDate("delivery", 0.7),
+        noPrice: us.filter(function (u) { return !u.price; }).length,
+      };
+    });
+    var milestoneTotals = { total: usd(msTotals.total), m20: usd(msTotals.m20), m70: usd(msTotals.m70) };
+
     /* ---- key observations ---- */
     var obs = [];
     // 1 commitments
@@ -726,7 +754,7 @@
         awaitingVal: awaitingVal, awaitingQty: awaitingQty, awaitingCount: awaiting.length,
       },
       counts: cnt, total: total, snapshot: snapshot, classes: classes, fullLines: fullLinesAll, uncommitted: uncommitted,
-      pipeline: pipeline, observations: obs, upcoming: upcoming, actions: actions, note: notesNote,
+      pipeline: pipeline, milestones: milestones, milestoneTotals: milestoneTotals, observations: obs, upcoming: upcoming, actions: actions, note: notesNote,
       valueBars: valueBars, customers: custArr, attention: att, issues: issues.length,
       reviewNames: review.map(function (r) { return r.proj; }),
       cfg: { redDays: cfg.redDays, amberDays: cfg.amberDays },
@@ -793,6 +821,35 @@
     kids.push(table([1150, 2700, 1350, 560, 520, 900, 1500, 1256], ["Request", "Project / Customer", "Requester", "Line", "Qty", "Est. Value", "Delivery Date", "Status"],
       m.pipeline.map(function (p) { return [p.opp, p.name, p.requester || "", p.line, String(p.qty), p.value, p.po, p.status]; }),
       { fills: m.pipeline.map(function (p) { return p.pastDue ? "F8D7DA" : undefined; }) }));
+
+    kids.push(heading("Milestone Payments and PO Value"));
+    kids.push(para("Total PO value is the sum of the Unit Price of each requested breaker. The 20% milestone payment (Finalized Tech Details Due) is the date BMcD owes Wesco 20%; the customer pays 30% at that date, covering that 20% plus the 10% BMcD already paid. The 70% milestone payment is due at the Delivery Date.", { after: 80 }));
+    function msCell(items, label) {
+      if (!items.length) return [para("—", { after: 0 })];
+      return items.map(function (it) {
+        return new Paragraph({ spacing: { after: 40, line: 240 }, children: [run(it.date, { bold: true, size: 18 }), run("  " + label + " " + it.amount, { size: 18 })] });
+      });
+    }
+    var msRows = m.milestones.map(function (x) {
+      return [
+        [new Paragraph({ spacing: { after: 0, line: 240 }, children: [run(x.opp, { bold: true, size: 18 })] }), new Paragraph({ spacing: { after: 0, line: 240 }, children: [run(x.name, { size: 16 })] })],
+        x.total + (x.noPrice ? " *" : ""),
+        x.feedback.length ? x.feedback : ["TBD"],
+        msCell(x.m20, "Customer pays 30%:"),
+        msCell(x.m70, "Customer pays 70%:"),
+      ];
+    });
+    var tot = m.milestoneTotals;
+    msRows.push([
+      [new Paragraph({ spacing: { after: 0, line: 240 }, children: [run("Total", { bold: true, size: 18 })] })],
+      [new Paragraph({ spacing: { after: 0, line: 240 }, children: [run(tot.total, { bold: true, size: 18 })] })],
+      "",
+      [new Paragraph({ spacing: { after: 0, line: 240 }, children: [run("Customer pays 30%: " + tot.m20, { bold: true, size: 18 })] })],
+      [new Paragraph({ spacing: { after: 0, line: 240 }, children: [run("Customer pays 70%: " + tot.m70, { bold: true, size: 18 })] })],
+    ]);
+    kids.push(table([2300, 1300, 1500, 2400, 2436], ["Request / Project", "Total PO Value", "Drawing Feedback Due to MFG from BMcD", "20% Milestone Payment", "70% Milestone Payment"], msRows,
+      { fills: msRows.map(function (r, i) { return i === msRows.length - 1 ? "E8EEF7" : undefined; }) }));
+    if (m.milestones.some(function (x) { return x.noPrice; })) kids.push(para("* One or more units on this request have no Unit Price in Monday, so the totals are understated.", { before: 80, after: 80, italics: true, size: 16 }));
 
     kids.push(heading("Key Observations"));
     m.observations.forEach(function (t, i) { kids.push(para((i + 1) + ". " + t, { after: 80 })); });
