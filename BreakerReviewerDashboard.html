@@ -528,27 +528,50 @@
              milestone + the 10% BMcD already paid), and
          70% on the Delivery Date. */
     function usd(v) { return "$" + String(Math.round(v)).replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
-    var msTotals = { total: 0, m20: 0, m70: 0 };
+    var msTotals = { qty: 0, total: 0, m20: 0, m70: 0 };
     var milestones = active.filter(function (r) { return r.units.length > 0; }).map(function (r) {
       var us = r.units;
       var total = sum(us, function (u) { return u.price || 0; });
       function byDate(key, share) {
         var g = {};
-        us.forEach(function (u) { var d = u[key]; var k = d == null ? "tbd" : String(d); g[k] = (g[k] || 0) + (u.price || 0) * share; });
-        return Object.keys(g).sort(function (a, b) { return a === "tbd" ? 1 : b === "tbd" ? -1 : a - b; })
-          .map(function (k) { return { date: k === "tbd" ? "TBD" : fmtFull(Number(k)), amount: usd(g[k]) }; });
+        us.forEach(function (u) {
+          var d = u[key], k = d == null ? "tbd" : String(d);
+          var e = g[k] = g[k] || { n: d == null ? null : d, amt: 0, lines: [] };
+          e.amt += (u.price || 0) * share;
+          if (!isNaN(u.line) && e.lines.indexOf(u.line) < 0) e.lines.push(u.line);
+        });
+        return Object.keys(g).map(function (k) { return g[k]; })
+          .sort(function (a, b) { return a.n == null ? 1 : b.n == null ? -1 : a.n - b.n; })
+          .map(function (e) { return { n: e.n, date: e.n == null ? "TBD" : fmtFull(e.n), amount: usd(e.amt), lines: e.lines }; });
       }
-      var fb = uniq(us.map(function (u) { return lines[u.line] ? lines[u.line].feedbackDue : null; })
-        .filter(function (x) { return x != null; })).sort(function (a, b) { return a - b; })
-        .map(function (n) { return fmtFull(n); });
-      msTotals.total += total; msTotals.m20 += total * 0.3; msTotals.m70 += total * 0.7;
+      // Project-specific feedback due to MFG (slot inventory board), per PO line
+      var fbMap = {};
+      us.forEach(function (u) {
+        var d = lines[u.line] ? lines[u.line].feedbackDue : null;
+        if (d == null) return;
+        fbMap[d] = fbMap[d] || [];
+        if (!isNaN(u.line) && fbMap[d].indexOf(u.line) < 0) fbMap[d].push(u.line);
+      });
+      var fbN = Object.keys(fbMap).map(Number).sort(function (a, b) { return a - b; });
+      var m20 = byDate("techDue", 0.3), m70 = byDate("delivery", 0.7);
+      var m20Known = m20.filter(function (e) { return e.n != null; });
+      // Row shading: nearest of this row's feedback date or 20% milestone (Finalized Tech Details Due) date
+      var keyDates = fbN.concat(m20Known.map(function (e) { return e.n; }));
+      var nearest = keyDates.length ? Math.min.apply(null, keyDates) - T : null;
+      var shade = nearest == null ? "" : nearest <= cfg.redDays ? "red" : nearest <= cfg.amberDays ? "amber" : "";
+      msTotals.qty += us.length; msTotals.total += total; msTotals.m20 += total * 0.3; msTotals.m70 += total * 0.7;
       return {
         opp: r.opp, name: r.proj + " / " + r.customer + (r.cat === "review" ? " (under review)" : ""),
-        total: usd(total), feedback: fb, m20: byDate("techDue", 0.3), m70: byDate("delivery", 0.7),
+        qty: us.length, total: usd(total),
+        feedback: fbN.map(function (n) { return fmtFull(n); }), fbN: fbN, fbLines: fbMap,
+        m20: m20, m70: m70,
+        days20: m20Known.length ? m20Known[0].n - T : null,
+        shade: shade,
         noPrice: us.filter(function (u) { return !u.price; }).length,
       };
     });
-    var milestoneTotals = { total: usd(msTotals.total), m20: usd(msTotals.m20), m70: usd(msTotals.m70) };
+    var msRed = milestones.filter(function (x) { return x.shade === "red"; }).length;
+    var milestoneTotals = { qty: msTotals.qty, total: usd(msTotals.total), m20: usd(msTotals.m20), m70: usd(msTotals.m70) };
 
     /* ---- key observations ---- */
     var obs = [];
@@ -570,6 +593,27 @@
         }).join("; ") + ". Confirm the customer " + plural(pastDue.length, "PO has", "POs have") + " been released or return the slots to inventory.");
     } else {
       o2.push("No approved requests are past their Finalized Tech Details Due date.");
+      // Next upcoming deadline: project-specific feedback to MFG or a 20% milestone date (Monday data)
+      var evs = [];
+      milestones.forEach(function (x) {
+        x.fbN.forEach(function (n) { evs.push({ n: n, kind: 0, opp: x.opp, lines: x.fbLines[n] || [] }); });
+        x.m20.forEach(function (e) { if (e.n != null) evs.push({ n: e.n, kind: 1, opp: x.opp, lines: e.lines }); });
+      });
+      evs = evs.filter(function (e) { return e.n >= T; }).sort(function (a, b) { return a.n - b.n || a.kind - b.kind; });
+      if (evs.length) {
+        var ne = evs[0];
+        var same = evs.filter(function (e) { return e.n === ne.n && e.kind === ne.kind; });
+        var neOpps = uniq(same.map(function (e) { return e.opp; }));
+        var neLines = uniq([].concat.apply([], same.map(function (e) { return e.lines; }))).sort(function (a, b) { return a - b; });
+        var neLineTxt = neLines.length ? " (" + linesLabel(neLines) + ")" : "";
+        var follow = evs.filter(function (e) { return e.kind === 1; })[0];
+        if (ne.kind === 0) {
+          o2.push("The next deadline is project-specific feedback to the manufacturer on " + fmtShort(ne.n, T) + " for " + andJoin(neOpps) + neLineTxt +
+            (follow ? ", followed by " + fmtShort(follow.n, T) + ", the date BMcD needs the customer PO in hand to pay Wesco its 20%" : "") + ".");
+        } else {
+          o2.push("The next deadline is " + fmtShort(ne.n, T) + ", the date BMcD needs the customer PO in hand for " + andJoin(neOpps) + neLineTxt + " to pay Wesco its 20%.");
+        }
+      }
     }
     if (soon.length) {
       o2.push(soon.map(function (r) { var d = r.dropDead - T; return r.opp + " (" + r.qty + " breakers, " + fmtM(r.value) + ") follows " + relDay(d) + ", " + fmtMonthDay(r.dropDead); }).join("; ") + ".");
@@ -662,7 +706,7 @@
         lineText: head + body,
         keyDates: [
           poText.length ? { label: "Finalized Tech Details Due (requests): ", text: poText.join(" and ") } : null,
-          L.feedbackDue != null ? { label: "Feedback due to MFG: ", text: fmtFull(L.feedbackDue) } : null,
+          L.feedbackDue != null ? { label: "Project-specific feedback due to MFG: ", text: fmtFull(L.feedbackDue) } : null,
           dr ? { label: "Initial drawings due to BMcD: ", text: fmtFull(dr.date) } : null,
           { label: "Action: ", text: actionText },
         ].filter(Boolean),
@@ -754,7 +798,7 @@
         awaitingVal: awaitingVal, awaitingQty: awaitingQty, awaitingCount: awaiting.length,
       },
       counts: cnt, total: total, snapshot: snapshot, classes: classes, fullLines: fullLinesAll, uncommitted: uncommitted,
-      pipeline: pipeline, milestones: milestones, milestoneTotals: milestoneTotals, observations: obs, upcoming: upcoming, actions: actions, note: notesNote,
+      pipeline: pipeline, milestones: milestones, milestoneTotals: milestoneTotals, msRed: msRed, observations: obs, upcoming: upcoming, actions: actions, note: notesNote,
       valueBars: valueBars, customers: custArr, attention: att, issues: issues.length,
       reviewNames: review.map(function (r) { return r.proj; }),
       cfg: { redDays: cfg.redDays, amberDays: cfg.amberDays },
@@ -787,16 +831,16 @@
       });
       var fill = o.header ? NAVY : o.fill;
       return new TableCell({
-        width: { size: w, type: WidthType.DXA }, margins: { top: 30, bottom: 30, left: 108, right: 108 },
+        width: { size: w, type: WidthType.DXA }, margins: { top: 30, bottom: 30, left: o.mx || 108, right: o.mx || 108 },
         shading: fill ? { type: ShadingType.CLEAR, color: "auto", fill: fill } : undefined, children: kids,
       });
     }
     function table(widths, header, rows, o) {
       o = o || {};
       var tot = widths.reduce(function (a, b) { return a + b; }, 0);
-      var trs = [new TableRow({ tableHeader: true, cantSplit: true, children: header.map(function (h, i) { return cell(h, widths[i], { header: true }); }) })];
+      var trs = [new TableRow({ tableHeader: true, cantSplit: true, children: header.map(function (h, i) { return cell(h, widths[i], { header: true, mx: o.mx }); }) })];
       rows.forEach(function (r, ri) {
-        trs.push(new TableRow({ cantSplit: true, children: r.map(function (c, i) { return cell(c, widths[i], { fill: o.fills ? o.fills[ri] : undefined }); }) }));
+        trs.push(new TableRow({ cantSplit: true, children: r.map(function (c, i) { return cell(c, widths[i], { fill: o.fills ? o.fills[ri] : undefined, mx: o.mx }); }) }));
       });
       return new Table({ width: { size: tot, type: WidthType.DXA }, columnWidths: widths, layout: TableLayoutType.FIXED, borders: borders, rows: trs });
     }
@@ -823,7 +867,10 @@
       { fills: m.pipeline.map(function (p) { return p.pastDue ? "F8D7DA" : undefined; }) }));
 
     kids.push(heading("Milestone Payments and PO Value"));
-    kids.push(para("Total PO value is the sum of the Unit Price of each requested breaker. The 20% milestone payment (Finalized Tech Details Due) is the date BMcD owes Wesco 20%; the customer pays 30% at that date, covering that 20% plus the 10% BMcD already paid. The 70% milestone payment is due at the Delivery Date.", { after: 80 }));
+    var redTxt = m.msRed > 0
+      ? "red marks anything past due or within " + m.cfg.redDays + " days (" + m.msRed + " " + (m.msRed === 1 ? "row" : "rows") + " currently)"
+      : "red would mark anything past due or within " + m.cfg.redDays + " days (none currently)";
+    kids.push(para("Total PO value is the sum of the Unit Price of each requested breaker. It excludes taxes (tax status is set at project PO issuance) and includes freight. The 20% milestone date (Finalized Tech Details Due) is when BMcD owes Wesco 20%, so it is the date by which BMcD needs the customer's PO in hand. The customer's 30% payment covers that 20% plus the 10% BMcD already paid. The 70% milestone date is the Delivery Date, when BMcD owes Wesco the remaining 70%, so the customer's 70% payment must be in hand by then. These are BMcD's internal deadlines, not customer payment due dates. Days are counted from " + m.generated.dateText + " to each request's 20% milestone date. Amber shading marks rows with a project-specific feedback or Finalized Tech Details date within roughly " + m.cfg.amberDays + " days; " + redTxt + ".", { after: 80 }));
     function msCell(items, label) {
       if (!items.length) return [para("—", { after: 0 })];
       return items.map(function (it) {
@@ -833,40 +880,28 @@
     var msRows = m.milestones.map(function (x) {
       return [
         [new Paragraph({ spacing: { after: 0, line: 240 }, children: [run(x.opp, { bold: true, size: 18 })] }), new Paragraph({ spacing: { after: 0, line: 240 }, children: [run(x.name, { size: 16 })] })],
+        String(x.qty),
         x.total + (x.noPrice ? " *" : ""),
         x.feedback.length ? x.feedback : ["TBD"],
-        msCell(x.m20, "Customer pays 30%:"),
-        msCell(x.m70, "Customer pays 70%:"),
+        msCell(x.m20, "Customer 30% payment:"),
+        x.days20 == null ? "TBD" : String(x.days20),
+        msCell(x.m70, "Customer 70% payment:"),
       ];
     });
     var tot = m.milestoneTotals;
+    function boldCell(t) { return [new Paragraph({ spacing: { after: 0, line: 240 }, children: [run(t, { bold: true, size: 18 })] })]; }
     msRows.push([
-      [new Paragraph({ spacing: { after: 0, line: 240 }, children: [run("Total", { bold: true, size: 18 })] })],
-      [new Paragraph({ spacing: { after: 0, line: 240 }, children: [run(tot.total, { bold: true, size: 18 })] })],
-      "",
-      [new Paragraph({ spacing: { after: 0, line: 240 }, children: [run("Customer pays 30%: " + tot.m20, { bold: true, size: 18 })] })],
-      [new Paragraph({ spacing: { after: 0, line: 240 }, children: [run("Customer pays 70%: " + tot.m70, { bold: true, size: 18 })] })],
+      boldCell("Total"), boldCell(String(tot.qty)), boldCell(tot.total), "",
+      boldCell("Customer 30% payment: " + tot.m20), "", boldCell("Customer 70% payment: " + tot.m70),
     ]);
-    kids.push(table([2300, 1300, 1500, 2400, 2436], ["Request / Project", "Total PO Value", "Drawing Feedback Due to MFG from BMcD", "20% Milestone Payment", "70% Milestone Payment"], msRows,
-      { fills: msRows.map(function (r, i) { return i === msRows.length - 1 ? "E8EEF7" : undefined; }) }));
+    // Total width = page text width: 9936 dxa (496.8 pt) = 12240 page - 2 x 1152 margins
+    kids.push(table([1800, 880, 1200, 1240, 2000, 800, 2016],
+      ["Request / Project", "Breaker Quantity", "Total PO Value", "Project Specific Feedback due to MFG", "20% Milestone: Customer PO Needed By", "Days to 20%", "70% Milestone: Customer Payment Needed By"], msRows,
+      { mx: 72, fills: m.milestones.map(function (x) { return x.shade === "red" ? "F8D7DA" : x.shade === "amber" ? "FFF3CD" : undefined; }).concat(["E8EEF7"]) }));
     if (m.milestones.some(function (x) { return x.noPrice; })) kids.push(para("* One or more units on this request have no Unit Price in Monday, so the totals are understated.", { before: 80, after: 80, italics: true, size: 16 }));
 
     kids.push(heading("Key Observations"));
     m.observations.forEach(function (t, i) { kids.push(para((i + 1) + ". " + t, { after: 80 })); });
-
-    kids.push(heading("Upcoming Decisions and Deadlines"));
-    kids.push(para("Rows are listed by Finalized Tech Details Due date, which is the 20% payment milestone for each line. Each request's date is the earliest Finalized Tech Details Due date among its breaker units (Monday subitems). Feedback dates are from the slot inventory board. Shading reflects the nearest Tech Details or feedback date in each row: red is past due or due within " + m.cfg.redDays + " days; amber falls within roughly " + m.cfg.amberDays + " days.", { after: 80 }));
-    var upW = [1800, 1008, 4032, 3096];
-    var upRows = m.upcoming.map(function (u) {
-      return [
-        u.techDueText, u.days == null ? "" : String(u.days), u.lineText,
-        u.keyDates.map(function (k) {
-          return new Paragraph({ spacing: { after: 0, line: 240 }, children: [run(k.label, { bold: true, size: 18 }), run(k.text, { size: 18 })] });
-        }),
-      ];
-    });
-    kids.push(table(upW, ["Finalized Tech Details Due (20% Payment Milestone)", "Days", "Line / Requests", "Other Key Dates and Action Needed"], upRows,
-      { fills: m.upcoming.map(function (u) { return u.shade === "red" ? "F8D7DA" : u.shade === "amber" ? "FFF3CD" : undefined; }) }));
 
     kids.push(heading("Recommended Leadership Actions"));
     m.actions.forEach(function (t, i) { kids.push(para((i + 1) + ". " + t, { after: 80 })); });
