@@ -173,6 +173,14 @@
     // Growth comparisons look back this many days (based on request created dates).
     baselineDays: 30,
 
+    // Assumed net margins for the illustrative net-income scenarios (not in Monday.com).
+    margins: [
+      { label: "Low", pct: 12 },
+      { label: "Base", pct: 16 },
+      { label: "High", pct: 20 },
+    ],
+    baseMarginIndex: 1,
+
     // Days thresholds for deadline shading / alerts.
     redDays: 30,
     amberDays: 90,
@@ -754,12 +762,13 @@
       actions.push("Decide how to position the remaining " + tight.v + " kV capacity (" + tight.avail + " breakers)" + (others.length ? " and the " + otherN + " uncommitted breakers at " + andJoin(others.map(function (c) { return c.v; })) + " kV" : "") + " with business development.");
     }
 
-    /* ---- estimated value by status (Monday data only) ---- */
-    var valueBars = [
-      { label: "Awaiting PO", value: awaitingVal, color: "blue" },
-      { label: "PO received", value: Math.max(approvedVal - awaitingVal, 0), color: "green" },
-      { label: "Under review", value: reviewVal, color: "orange" },
-    ];
+    /* ---- net income scenarios ---- */
+    var scen = cfg.margins.map(function (m) {
+      // Net income is tied to APPROVED requests only (under-review requests excluded).
+      var a = approvedVal * m.pct / 100, r = 0;
+      return { label: m.label, pct: m.pct, approved: a, review: r, total: a + r };
+    });
+    var base = scen[cfg.baseMarginIndex] || scen[0];
 
     /* ---- customers chart ---- */
     var cust = {};
@@ -795,11 +804,13 @@
       kpis: {
         total: total, mfrText: mfrText, committed: committed, committedPct: pct(committed, total), active: active.length,
         approvedCount: approved.length, reviewCount: review.length, totalVal: totalVal, approvedVal: approvedVal, reviewVal: reviewVal,
+        net: base, baseLabel: "Approved only, " + base.pct + "% margin*",
         awaitingVal: awaitingVal, awaitingQty: awaitingQty, awaitingCount: awaiting.length,
       },
       counts: cnt, total: total, snapshot: snapshot, classes: classes, fullLines: fullLinesAll, uncommitted: uncommitted,
       pipeline: pipeline, milestones: milestones, milestoneTotals: milestoneTotals, msRed: msRed, observations: obs, upcoming: upcoming, actions: actions, note: notesNote,
-      valueBars: valueBars, customers: custArr, attention: att, issues: issues.length,
+      scenarios: scen, customers: custArr, attention: att, issues: issues.length,
+      marginText: cfg.margins.map(function (m) { return m.pct + "%"; }).join(" / "),
       reviewNames: review.map(function (r) { return r.proj; }),
       cfg: { redDays: cfg.redDays, amberDays: cfg.amberDays },
       fmtM: fmtM,
@@ -926,7 +937,14 @@
     var F = await pdf.embedFont(StandardFonts.Helvetica), FB = await pdf.embedFont(StandardFonts.HelveticaBold), FI = await pdf.embedFont(StandardFonts.HelveticaOblique);
     var S = 792 / 1210; // layout is authored in "px" on a 1210 x 935 canvas
     function hex(h) { return rgb(parseInt(h.slice(1, 3), 16) / 255, parseInt(h.slice(3, 5), 16) / 255, parseInt(h.slice(5, 7), 16) / 255); }
-    var C = { navy: "#12355B", green: "#2E9E6B", orange: "#E8A33D", blue: "#2E6FB7", card: "#F2F5F9", border: "#DDE3EB", grey: "#C8D0DA", text: "#333B47", mute: "#7A8594", red: "#C0392B", white: "#FFFFFF" };
+    // Burns & McDonnell Ampersand design system colors
+    //   navy = Primary Three #002D59, blue = Primary Two #0048CD, green = Accent Four #11732D,
+    //   orange (Under review) = Accent Two #33C0FF, grey = Neutral Medium #A5ABAD,
+    //   card = Off-White #F4F5F7, border = Neutral Light #E3E7E8, text = Primary Four #051B38,
+    //   mute = Neutral Dark #546066, red = Accent Five #D6411C
+    var C = { navy: "#002D59", green: "#11732D", orange: "#33C0FF", blue: "#0048CD", card: "#F4F5F7", border: "#E3E7E8", grey: "#A5ABAD", text: "#051B38", mute: "#546066", red: "#D6411C", white: "#FFFFFF" };
+    // Label color that stays readable on a given fill (light fills get navy text)
+    function onFill(fill) { return (fill === C.grey || fill === C.orange) ? C.navy : C.white; }
     function safe(s) { return String(s == null ? "" : s).replace(/[–—]/g, "-").replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/[^\x20-\x7E\xA0-\xFF•]/g, "?"); }
     function path(d, o) {
       var opt = { x: 0, y: 612, scale: S };
@@ -977,7 +995,7 @@
       { big: String(k.committed), l1: "Committed / in review", l2: k.committedPct + "% of program", accent: C.blue },
       { big: String(k.active), l1: "Active requests", l2: k.approvedCount + " approved, " + k.reviewCount + " in review", accent: C.blue },
       { big: m.fmtM(k.totalVal), l1: "Est. project value", l2: m.fmtM(k.approvedVal) + " approved + " + m.fmtM(k.reviewVal) + " review", accent: C.blue },
-      { big: m.fmtM(k.awaitingVal), l1: "Awaiting customer PO", l2: k.awaitingCount + " " + (k.awaitingCount === 1 ? "request" : "requests") + ", " + k.awaitingQty + " breakers", accent: C.green },
+      { big: m.fmtM(k.net.total), l1: "Potential net income", l2: k.baseLabel, accent: C.green },
     ];
     cards.forEach(function (c, i) {
       var x = 47 + i * 226.5, y = 177, w = 211, h = 98;
@@ -1036,7 +1054,7 @@
         if (wa > 0) rect(x0, y, wa, 18, C.green);
         if (wr > 0) rect(x0 + wa, y, wr, 18, C.orange);
         if (wa > 0 && wa >= tw(m.fmtM(c.approved), 10, FB) + 6) text(m.fmtM(c.approved), x0 + wa / 2, y + 12.5, 10, { font: FB, color: C.white, align: "center" });
-        if (wr > 0 && wr >= tw(m.fmtM(c.review), 10, FB) + 6) text(m.fmtM(c.review), x0 + wa + wr / 2, y + 12.5, 10, { font: FB, color: C.white, align: "center" });
+        if (wr > 0 && wr >= tw(m.fmtM(c.review), 10, FB) + 6) text(m.fmtM(c.review), x0 + wa + wr / 2, y + 12.5, 10, { font: FB, color: C.navy, align: "center" });
         text(m.fmtM(tot), x0 + wa + wr + 6, y + 12.5, 10, { font: FB, color: C.navy });
       });
       var ly = 524;
@@ -1044,25 +1062,29 @@
       rect(690, ly + 6, 11, 8, C.orange); text("Under review", 706, ly + 14, 10, {});
     })();
 
-    // panel 3: estimated value by status
-    panel(806, 305, 358, 314, "Estimated project value by status ($M)");
+    // panel 3: net income scenarios
+    panel(806, 305, 358, 314, "Potential net income scenarios ($M)*");
     (function () {
-      var bars = m.valueBars, maxV = Math.max.apply(null, bars.map(function (b) { return b.value / 1e6; }).concat([1]));
-      var base = 568, scale = 176 / maxV, bw = 62, xs = [878, 990, 1098];
-      bars.forEach(function (b, i) {
-        var cx = xs[i], h = b.value / 1e6 * scale;
-        if (h > 0) rect(cx - bw / 2, base - h, bw, h, C[b.color]);
-        text(m.fmtM(b.value), cx, base - h - 7, 14, { font: FB, color: C.navy, align: "center" });
-        text(b.label, cx, base + 17, 10.5, { color: C.text, align: "center" });
+      var sc = m.scenarios, maxT = Math.max.apply(null, sc.map(function (s) { return s.total / 1e6; }).concat([1]));
+      var base = 568, scale = 176 / maxT, bw = 62, xs = [878, 990, 1098];
+      rect(840, 369, 11, 8, C.green); text("Approved (" + m.fmtM(m.kpis.approvedVal) + ")", 857, 377, 10, {});
+      sc.forEach(function (s, i) {
+        var cx = xs[i] || (878 + i * 110), ha = s.approved / 1e6 * scale, hr = s.review / 1e6 * scale;
+        rect(cx - bw / 2, base - ha, bw, ha, C.green);
+        rect(cx - bw / 2, base - ha - hr, bw, hr, C.orange);
+        if (ha > 16) text(m.fmtM(s.approved), cx, base - ha / 2 + 4, 12, { font: FB, color: C.white, align: "center" });
+        if (hr > 16) text(m.fmtM(s.review), cx, base - ha - hr / 2 + 4, 12, { font: FB, color: C.navy, align: "center" });
+        text(m.fmtM(s.total), cx, base - ha - hr - 7, 14, { font: FB, color: C.navy, align: "center" });
+        text(s.label + " (" + s.pct + "%)", cx, base + 17, 11.5, { color: C.text, align: "center" });
       });
-      rect(836, base, 306, 1.4, "#222222");
+      rect(836, base, 306, 1.4, C.text);
     })();
 
     // panel 4: voltage class
-    panel(46, 637, 548, 229, "Slot inventory by voltage class (breakers)");
+    panel(46, 637, 1118, 229, "Slot inventory by voltage class (breakers)");
     (function () {
       var cs = m.classes, maxT = Math.max.apply(null, cs.map(function (c) { return c.total; }).concat([1]));
-      var x0 = 114, wMax = 248, y0 = 700, step = 44;
+      var x0 = 114, wMax = 900, y0 = 700, step = 44;
       var items = [["Available", C.grey], ["Pending Reservation", C.green], ["Pending Review", C.orange]];
       if (cs.some(function (c) { return c.res > 0; })) items.push(["Reserved", C.navy]);
       var lx = 118;
@@ -1076,7 +1098,7 @@
           if (w > 0) {
             rect(x, y, w, 24, seg[1]);
             var lbl = String(seg[0]);
-            if (w >= tw(lbl, 12, FB) + 6) text(lbl, x + w / 2, y + 17, 12, { font: FB, color: seg[1] === C.grey ? C.navy : C.white, align: "center" });
+            if (w >= tw(lbl, 12, FB) + 6) text(lbl, x + w / 2, y + 17, 12, { font: FB, color: onFill(seg[1]), align: "center" });
             x += w;
           }
         });
@@ -1084,21 +1106,8 @@
       });
     })();
 
-    // panel 5: attention
-    panel(616, 637, 548, 229, "Board attention items");
-    (function () {
-      var y = 695, maxLines = 11;
-      m.attention.forEach(function (t) {
-        var ls = wrap(t, 12.6, 487, F);
-        if (y > 850) return;
-        text("•", 632, y, 12.6, { color: C.text });
-        ls.forEach(function (l, i) { if (y + i * 17 < 856) text(l, 646, y + i * 17, 12.6, { color: C.text }); });
-        y += ls.length * 17 + 9;
-      });
-    })();
-
     // footnotes
-    text("Estimated project values are as entered on each Slot Reservation Request in Monday.com. All figures are pulled live from Monday.com.", 47, 884, 10, { font: FI, color: C.mute });
+    text("*Illustrative only: net income = assumed net margin (" + m.marginText + ") applied to approved requests only (under-review requests excluded). Monday.com contains no net income data; replace with finance-approved margins.", 47, 884, 10, { font: FI, color: C.mute });
     var rn = m.reviewNames.length ? " " + m.fmtM(m.kpis.reviewVal) + " under review (" + m.reviewNames.join(", ") + ") is not yet approved." : "";
     text("Source: Monday.com Breaker Slot Program Workspace, pulled live " + m.generated.dateText + ". Project values are estimates." + rn, 47, 898, 10, { font: FI, color: C.mute });
 
