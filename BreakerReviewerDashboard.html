@@ -297,11 +297,15 @@
       var slot = slotById[r.slotId];
       var rq = {
         id: r.id, opp: r.opp || r.name, project: r.project || "", client: r.client || "",
-        qty: num(r.qty), value: num(r.value), dropDead: dn(r.dropDead), status: r.status, cat: cat,
+        qty: num(r.qty), value: num(r.value), dropDead: null, status: r.status, cat: cat,
         breakerIds: (r.breakerIds || []).map(String), line: slot ? slot.poLineN : null,
         created: dn(r.createdAt), updated: dn(r.updatedAt), reviewedBy: r.reviewedBy || "",
       };
       rq.units = rq.breakerIds.map(function (id) { return unitById[id]; }).filter(Boolean);
+      // The request's key date = earliest Finalized Tech Details Due among its breaker units
+      // (Monday subitems). This triggers BMcD's 20% payment to Wesco and the customer's 30%.
+      var tds = rq.units.map(function (u) { return u.techDue; }).filter(function (x) { return x != null; });
+      rq.dropDead = tds.length ? Math.min.apply(null, tds) : null;
       rq.customer = shortClient(rq.client);
       rq.proj = shortProject(rq.project);
       return rq;
@@ -469,7 +473,7 @@
     var poPressure = pastDue.length > 0 || soon.length > 0;
     var headBits = [];
     if (demandUp) headBits.push("demand accelerating");
-    if (poPressure) headBits.push("PO deadlines arriving");
+    if (poPressure) headBits.push("Finalized Tech Details deadlines arriving");
     var headline = "Overall Status: " + statusWord + (headBits.length ? ", with " + headBits.join(" and ") : "");
 
     /* ---- first-to-convert projects ---- */
@@ -531,12 +535,12 @@
     // 2 PO status
     var o2 = [];
     if (pastDue.length) {
-      o2.push(cap(pastDue.length === 1 ? "one" : String(pastDue.length)) + " approved " + plural(pastDue.length, "request is", "requests are") + " past " + (pastDue.length === 1 ? "its" : "their") + " PO date. " +
+      o2.push(cap(pastDue.length === 1 ? "one" : String(pastDue.length)) + " approved " + plural(pastDue.length, "request is", "requests are") + " past " + (pastDue.length === 1 ? "its" : "their") + " Finalized Tech Details Due date. " +
         pastDue.map(function (r) {
-          return r.opp + " (" + r.proj + ", " + r.qty + " breakers, " + fmtM(r.value) + ") had a drop-dead PO release date of " + fmtMonthDay(r.dropDead) + " and " + (r.units.length && r.units.every(function (u) { return u.status === "Pending Reservation"; }) ? "is still Pending Reservation on the board" : "has not been marked Reserved");
+          return r.opp + " (" + r.proj + ", " + r.qty + " breakers, " + fmtM(r.value) + ") had a Finalized Tech Details Due date (20% payment to Wesco) of " + fmtMonthDay(r.dropDead) + " and " + (r.units.length && r.units.every(function (u) { return u.status === "Pending Reservation"; }) ? "is still Pending Reservation on the board" : "has not been marked Reserved");
         }).join("; ") + ". Confirm the customer " + plural(pastDue.length, "PO has", "POs have") + " been released or return the slots to inventory.");
     } else {
-      o2.push("No approved requests are past their PO date.");
+      o2.push("No approved requests are past their Finalized Tech Details Due date.");
     }
     if (soon.length) {
       o2.push(soon.map(function (r) { var d = r.dropDead - T; return r.opp + " (" + r.qty + " breakers, " + fmtM(r.value) + ") follows " + relDay(d) + ", " + fmtMonthDay(r.dropDead); }).join("; ") + ".");
@@ -548,7 +552,7 @@
     if (reviewSorted.length) {
       var rv = reviewSorted[0];
       o3.push("The largest request is still under review. " + rv.proj + " (" + rv.opp + ", " + fmtM(rv.value) + ", " + rv.qty + " breakers" + (rv.line != null ? " on Line " + rv.line : "") + ")" +
-        (rv.dropDead != null ? " has a PO drop-dead date of " + fmtShort(rv.dropDead, T) + (rv.dropDead >= T ? ", so a reviewer decision is needed well ahead of that date." : ", which has passed, so a reviewer decision is overdue.") : " needs a reviewer decision."));
+        (rv.dropDead != null ? " has a Finalized Tech Details Due date of " + fmtShort(rv.dropDead, T) + (rv.dropDead >= T ? ", so a reviewer decision is needed well ahead of that date." : ", which has passed, so a reviewer decision is overdue.") : " needs a reviewer decision."));
       if (reviewSorted.length > 1) o3.push((reviewSorted.length - 1) + " other " + plural(reviewSorted.length - 1, "request is", "requests are") + " also awaiting a decision.");
     } else {
       o3.push("No requests are awaiting a reviewer decision.");
@@ -612,7 +616,7 @@
       var pd = open.filter(function (r) { return r.dropDead < T; });
       if (pd.length) acts.push("Confirm PO release or return the slots to inventory");
       var rv = rs.filter(function (r) { return r.cat === "review"; });
-      if (rv.length) acts.push("Approve or deny the request ahead of the PO date");
+      if (rv.length) acts.push("Approve or deny the request ahead of the Finalized Tech Details Due date");
       var seen = {};
       lineIssues.forEach(function (i) { if (!seen[i.action] && acts.length < 3) { seen[i.action] = 1; acts.push(i.action); } });
       if (dr && dr.days <= 30 && dr.days >= -7) acts.push("confirm reviewer staffing");
@@ -628,7 +632,7 @@
         techDue: L.techDue, techDueText: L.techDue != null ? fmtFull(L.techDue) : "TBD", days: L.techDue != null ? L.techDue - T : null,
         lineText: head + body,
         keyDates: [
-          poText.length ? { label: "PO drop-dead: ", text: poText.join(" and ") } : null,
+          poText.length ? { label: "Finalized Tech Details Due (requests): ", text: poText.join(" and ") } : null,
           L.feedbackDue != null ? { label: "Feedback due to MFG: ", text: fmtFull(L.feedbackDue) } : null,
           dr ? { label: "Initial drawings due to BMcD: ", text: fmtFull(dr.date) } : null,
           { label: "Action: ", text: actionText },
@@ -696,12 +700,12 @@
     var att = [];
     if (pastDue.length || soon.length) {
       var s1 = [];
-      pastDue.forEach(function (r) { s1.push(r.proj + " PO (" + r.qty + " breakers, " + fmtM(r.value) + ") is past its " + fmtMonthDay(r.dropDead) + " date"); });
+      pastDue.forEach(function (r) { s1.push(r.proj + " (" + r.qty + " breakers, " + fmtM(r.value) + ") is past its Finalized Tech Details Due date of " + fmtMonthDay(r.dropDead)); });
       soon.forEach(function (r) { s1.push(r.proj + " (" + fmtM(r.value) + ") due " + fmtMonthDay(r.dropDead)); });
       att.push(s1.join("; ") + ".");
     }
     reviewSorted.forEach(function (r) {
-      att.push(r.proj + " (" + fmtM(r.value) + ", " + r.qty + " breakers) needs a reviewer decision" + (r.dropDead != null ? " before its " + fmtShort(r.dropDead, T) + " PO date." : "."));
+      att.push(r.proj + " (" + fmtM(r.value) + ", " + r.qty + " breakers) needs a reviewer decision" + (r.dropDead != null ? " before its " + fmtShort(r.dropDead, T) + " Finalized Tech Details Due date." : "."));
     });
     if (nextDrawing && nextDrawing.days >= -7 && nextDrawing.days <= 60) {
       att.push(nextDrawing.mfr + " drawings due " + fmtMonthDay(nextDrawing.date) + "; confirm BMcD review resourcing.");
@@ -709,7 +713,7 @@
     if (tight) att.push(tight.v + " kV capacity tightening: " + tight.avail + " breakers left" + (openAll.length ? "; " + andJoin(openAll.map(function (c) { return c.v + " kV fully open (" + c.total + ")"; })) : "") + ".");
     if (narrIssues.length) att.push(narrIssues.length + " Monday data " + plural(narrIssues.length, "issue") + " to correct (see Executive Summary).");
 
-    var notesNote = "Note: All figures are pulled live from Monday.com. Finalized Tech Details Due dates mark the 20% payment milestone to Wesco and the customer's 30% milestone; the PO date shown for each request is that 30% milestone. Feedback-due dates come from the slot inventory board.";
+    var notesNote = "Note: All figures are pulled live from Monday.com. Each request's key date is the earliest Finalized Tech Details Due date among its breaker units (subitems); that date triggers BMcD's 20% milestone payment to Wesco. Feedback-due dates come from the slot inventory board.";
 
     return {
       generated: { date: T, dateText: fmtLongDate(T), by: opts.reviewerEmail || "", at: raw.generatedAt || "" },
@@ -785,7 +789,7 @@
     kids.push(para(fl, { before: 200, after: 80 }));
 
     kids.push(heading("Request Pipeline"));
-    kids.push(table([1296, 3456, 576, 576, 1008, 1584, 1440], ["Request", "Project / Customer", "Line", "Qty", "Est. Value", "30% Milestone", "Status"],
+    kids.push(table([1296, 3456, 576, 576, 1008, 1584, 1440], ["Request", "Project / Customer", "Line", "Qty", "Est. Value", "Tech Details Due", "Status"],
       m.pipeline.map(function (p) { return [p.opp, p.name, p.line, String(p.qty), p.value, p.po, p.status]; }),
       { fills: m.pipeline.map(function (p) { return p.pastDue ? "F8D7DA" : undefined; }) }));
 
@@ -793,7 +797,7 @@
     m.observations.forEach(function (t, i) { kids.push(para((i + 1) + ". " + t, { after: 80 })); });
 
     kids.push(heading("Upcoming Decisions and Deadlines"));
-    kids.push(para("Rows are listed by Finalized Tech Details Due date, which is the 20% payment milestone for each line. The PO date shown for each request is its 30% customer-payment milestone, from the Slot Reservation Requests board. Feedback dates are from the slot inventory board. Shading reflects the nearest PO or feedback date in each row: red is past due or due within " + m.cfg.redDays + " days; amber falls within roughly " + m.cfg.amberDays + " days.", { after: 80 }));
+    kids.push(para("Rows are listed by Finalized Tech Details Due date, which is the 20% payment milestone for each line. Each request's date is the earliest Finalized Tech Details Due date among its breaker units (Monday subitems). Feedback dates are from the slot inventory board. Shading reflects the nearest Tech Details or feedback date in each row: red is past due or due within " + m.cfg.redDays + " days; amber falls within roughly " + m.cfg.amberDays + " days.", { after: 80 }));
     var upW = [1800, 1008, 4032, 3096];
     var upRows = m.upcoming.map(function (u) {
       return [
@@ -1031,6 +1035,10 @@
 
     /* 70% milestone = earliest Delivery Date among a request's breaker units
        (the 30% milestone — Finalized Tech Details Due — is saved on the request itself). */
+    function m30Of(req) {
+      const ds = (req.breakers||[]).map(b=>b.techDate).filter(d=>/^\d{4}-\d{2}-\d{2}/.test(d||"")).map(d=>d.slice(0,10)).sort();
+      return ds[0] || "—";
+    }
     function m70Of(req) {
       const ds = (req.breakers||[]).map(b=>b.deliveryDate).filter(d=>/^\d{4}-\d{2}-\d{2}/.test(d||"")).map(d=>d.slice(0,10)).sort();
       return ds[0] || "—";
@@ -1373,7 +1381,7 @@
                       ["Requester",        req.requesterName||"—"],
                       ["Est. Project Value",req.estimatedValue?`$${Number(req.estimatedValue).toLocaleString()}`:"—"],
                       ["Breakers Enable",   req.breakersEnable||"—"],
-                      ["30% Milestone (Tech Details)", req.dropDeadDate||"—"],
+                      ["Finalized Tech Details Due", m30Of(req)],
                       ["70% Milestone (Delivery)",     m70Of(req)],
                       ["Qty Requested",     `${req.quantityNeeded} unit${req.quantityNeeded!==1?"s":""}`],
                       ["Units Selected",    `${req.breakerIds.length} unit${req.breakerIds.length!==1?"s":""}`],
@@ -1488,7 +1496,7 @@
                         ["Requester",        req.requesterName||"—"],
                         ["Est. Project Value",req.estimatedValue?`$${Number(req.estimatedValue).toLocaleString()}`:"—"],
                         ["Breakers Enable",   req.breakersEnable||"—"],
-                        ["30% Milestone (Tech Details)", req.dropDeadDate||"—"],
+                        ["Finalized Tech Details Due", m30Of(req)],
                       ["70% Milestone (Delivery)",     m70Of(req)],
                         ["Qty Requested",     `${req.quantityNeeded} unit${req.quantityNeeded!==1?"s":""}`],
                         ["Opportunity #",     req.opportunityNum||"—"],
@@ -1677,7 +1685,7 @@
               ["Requester",          h.requesterName||"—"],
               ["Est. Project Value", h.estimatedValue?`$${Number(h.estimatedValue).toLocaleString()}`:"—"],
               ["Breakers Enable",    h.breakersEnable||"—"],
-              ["30% Milestone (Tech Details)", h.dropDeadDate||"—"],
+              ["Finalized Tech Details Due", m30Of(h)],
               ["70% Milestone (Delivery)",     m70Of(h)],
               ["Qty Requested",      h.quantityNeeded!=null?`${h.quantityNeeded} unit${h.quantityNeeded!==1?"s":""}`:"—"],
               ["Units Selected",     `${(h.breakerIds||[]).length} unit${(h.breakerIds||[]).length!==1?"s":""}`],
