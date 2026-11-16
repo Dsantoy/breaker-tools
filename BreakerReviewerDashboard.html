@@ -482,7 +482,7 @@
     var headBits = [];
     if (demandUp) headBits.push("demand accelerating");
     if (poPressure) headBits.push("Finalized Tech Details deadlines arriving");
-    var headline = "Overall Status: " + statusWord + (headBits.length ? ", with " + headBits.join(" and ") : "");
+    var headline = "Overall status: " + statusWord + (headBits.length ? ", with " + headBits.join(" and ") : "");
 
     /* ---- first-to-convert projects ---- */
     var firstPO = awaiting.filter(function (r) { return r.dropDead != null; }).sort(function (a, b) { return a.dropDead - b.dropDead; }).slice(0, 2);
@@ -824,14 +824,20 @@
     var Document = d.Document, Packer = d.Packer, Paragraph = d.Paragraph, TextRun = d.TextRun, Table = d.Table, TableRow = d.TableRow,
       TableCell = d.TableCell, WidthType = d.WidthType, ShadingType = d.ShadingType, BorderStyle = d.BorderStyle, TableLayoutType = d.TableLayoutType;
     var NAVY = "002D59", FONT = "Calibri";
+    // Ampersand design system: headings Primary Four, body ink, secondary Neutral Dark, rule Primary One, highlight Accent One
+    var HEAD = "051B38", INK = "0A0816", MUTED = "546066", BLUE = "0066FF", NEON = "E6F001";
 
     function run(t, o) { o = o || {}; return new TextRun({ text: t, bold: o.bold, italics: o.italics, color: o.color, size: o.size, font: FONT }); }
     function para(t, o) {
       o = o || {};
       return new Paragraph({ spacing: { before: o.before || 0, after: o.after == null ? 80 : o.after, line: o.line }, keepNext: o.keepNext, children: Array.isArray(t) ? t : [run(t, o)] });
     }
-    function heading(t) { return para(t, { bold: true, color: NAVY, size: 26, before: 240, after: 80, keepNext: true }); }
-    var bdr = { style: BorderStyle.SINGLE, size: 4, color: "000000" };
+    function heading(t) {
+      return new Paragraph({ spacing: { before: 240, after: 80 }, keepNext: true,
+        border: { bottom: { style: BorderStyle.SINGLE, size: 12, color: BLUE, space: 3 } },
+        children: [run(t, { bold: true, color: HEAD, size: 26 })] });
+    }
+    var bdr = { style: BorderStyle.SINGLE, size: 4, color: "A5ABAD" };
     var borders = { top: bdr, bottom: bdr, left: bdr, right: bdr, insideHorizontal: bdr, insideVertical: bdr };
 
     function cell(content, w, o) {
@@ -858,26 +864,29 @@
     function spacer() { return new Paragraph({ spacing: { after: 0, line: 240 }, children: [] }); }
 
     var kids = [];
-    kids.push(new Paragraph({ spacing: { after: 200 }, children: [run("Breaker Slot Program: Executive Summary", { bold: true, color: NAVY, size: 40 })] }));
-    kids.push(para("Status as of " + m.generated.dateText, { after: 80 }));
+    kids.push(new Paragraph({ spacing: { after: 200 }, children: [
+      run("Breaker Slot Program: ", { bold: true, color: HEAD, size: 40 }),
+      new TextRun({ text: "Executive Summary", bold: true, color: HEAD, size: 40, font: FONT, shading: { type: ShadingType.CLEAR, color: "auto", fill: NEON } }),
+    ] }));
+    kids.push(para("Status as of " + m.generated.dateText, { after: 80, color: MUTED }));
     kids.push(heading(m.headline));
     m.overview.forEach(function (p) { kids.push(para(p, { after: 80 })); });
 
-    kids.push(heading("Program Snapshot"));
+    kids.push(heading("Program snapshot"));
     kids.push(table([3456, 6480], ["Metric", "Status"], m.snapshot));
 
-    kids.push(heading("Slot Inventory by Voltage Class"));
+    kids.push(heading("Slot inventory by voltage class"));
     kids.push(table([2160, 1152, 1152, 1440, 1728, 2304], ["Class", "Breakers", "Available", "Pending Review", "Pending Reservation", "Comment"],
       m.classes.map(function (c) { return [c.label, String(c.total), String(c.avail), String(c.pr), String(c.pres), c.comment]; })));
     var fl = "Fully committed lines: " + (m.fullLines.length ? andJoin(m.fullLines.map(String)) : "none") + "." + (m.uncommitted && m.uncommitted.length ? " Uncommitted " + m.classes.filter(function (c) { return c.avail > 0 && c.avail / c.total < 0.5 && c.total - c.avail > 0; }).map(function (c) { return c.v; })[0] + " kV capacity is " + andJoin(m.uncommitted) + "." : "");
     kids.push(para(fl, { before: 200, after: 80 }));
 
-    kids.push(heading("Request Pipeline"));
+    kids.push(heading("Request pipeline"));
     kids.push(table([1150, 2580, 1350, 560, 520, 1020, 1500, 1256], ["Request", "Project / Customer", "Requester", "Line", "Qty", "Est. Project Value", "Delivery Date", "Status"],
       m.pipeline.map(function (p) { return [p.opp, p.name, p.requester || "", p.line, String(p.qty), p.value, p.po, p.status]; }),
       { fills: m.pipeline.map(function (p) { return p.pastDue ? "F8D7DA" : undefined; }) }));
 
-    kids.push(heading("Milestone Payments and PO Value"));
+    kids.push(heading("Milestone payments and PO value"));
     var redTxt = m.msRed > 0
       ? "red marks anything past due or within " + m.cfg.redDays + " days (" + m.msRed + " " + (m.msRed === 1 ? "row" : "rows") + " currently)"
       : "red would mark anything past due or within " + m.cfg.redDays + " days (none currently)";
@@ -909,18 +918,18 @@
     kids.push(table([1800, 880, 1200, 1240, 2000, 800, 2016],
       ["Request / Project", "Breaker Quantity", "Total PO Value", "Project Specific Feedback due to MFG", "20% Milestone: Customer PO Needed By", "Days to 20%", "70% Milestone: Customer Payment Needed By"], msRows,
       { mx: 72, fills: m.milestones.map(function (x) { return x.shade === "red" ? "F8D7DA" : x.shade === "amber" ? "FFF3CD" : undefined; }).concat(["E8EEF7"]) }));
-    if (m.milestones.some(function (x) { return x.noPrice; })) kids.push(para("* One or more units on this request have no Unit Price in Monday, so the totals are understated.", { before: 80, after: 80, italics: true, size: 16 }));
+    if (m.milestones.some(function (x) { return x.noPrice; })) kids.push(para("* One or more units on this request have no Unit Price in Monday, so the totals are understated.", { before: 80, after: 80, italics: true, size: 16, color: MUTED }));
 
-    kids.push(heading("Key Observations"));
+    kids.push(heading("Key observations"));
     m.observations.forEach(function (t, i) { kids.push(para((i + 1) + ". " + t, { after: 80 })); });
 
-    kids.push(heading("Recommended Leadership Actions"));
+    kids.push(heading("Recommended leadership actions"));
     m.actions.forEach(function (t, i) { kids.push(para((i + 1) + ". " + t, { after: 80 })); });
-    kids.push(new Paragraph({ spacing: { before: 120, after: 80 }, children: [run(m.note, { italics: true, size: 16 })] }));
+    kids.push(new Paragraph({ spacing: { before: 120, after: 80 }, children: [run(m.note, { italics: true, size: 16, color: MUTED })] }));
 
     var doc = new Document({
       creator: "BSF Review Dashboard", title: "Breaker Slot Program: Executive Summary",
-      styles: { default: { document: { run: { font: FONT, size: 22 }, paragraph: { spacing: { after: 200, line: 276 } } } } },
+      styles: { default: { document: { run: { font: FONT, size: 22, color: INK }, paragraph: { spacing: { after: 200, line: 276 } } } } },
       sections: [{ properties: { page: { size: { width: 12240, height: 15840 }, margin: { top: 1152, right: 1152, bottom: 1152, left: 1152, header: 720, footer: 720 } } }, children: kids }],
     });
     return asBuffer ? Packer.toBuffer(doc) : Packer.toBlob(doc);
@@ -942,7 +951,8 @@
     //   orange (Under review) = Accent Two #33C0FF, grey = Neutral Medium #A5ABAD,
     //   card = Off-White #F4F5F7, border = Neutral Light #E3E7E8, text = Primary Four #051B38,
     //   mute = Neutral Dark #546066, red = Accent Five #D6411C
-    var C = { navy: "#002D59", green: "#11732D", orange: "#33C0FF", blue: "#0048CD", card: "#F4F5F7", border: "#E3E7E8", grey: "#A5ABAD", text: "#051B38", mute: "#546066", red: "#D6411C", white: "#FFFFFF" };
+    var C = { navy: "#002D59", green: "#11732D", orange: "#33C0FF", blue: "#0048CD", card: "#F4F5F7", border: "#E3E7E8", grey: "#A5ABAD", text: "#0A0816", mute: "#546066", red: "#D6411C", white: "#FFFFFF",
+              heading: "#051B38", one: "#0066FF", neon: "#E6F001", mid: "#051B38", stripe: "#04255A", pale: "#E3E7E8" };
     // Label color that stays readable on a given fill (light fills get navy text)
     function onFill(fill) { return (fill === C.grey || fill === C.orange) ? C.navy : C.white; }
     function safe(s) { return String(s == null ? "" : s).replace(/[–—]/g, "-").replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/[^\x20-\x7E\xA0-\xFF•]/g, "?"); }
@@ -976,13 +986,15 @@
       return lines;
     }
 
-    // ---- header band
-    rect(0, 0, 1210, 95, C.navy);
-    text("Breaker Slot Program: Board Summary", 47, 51, 29, { font: FB, color: C.white });
-    text("Status as of " + m.generated.dateText, 47, 77, 14, { color: C.white });
-    var pillColor = m.statusWord === "ON TRACK" ? C.green : C.red;
-    rrect(981, 29, 183, 39, 19.5, { fill: pillColor });
-    text(m.statusWord, 1072.5, 54, 17, { font: FB, color: C.white, align: "center" });
+    // ---- header band (Primary Four midnight, diagonal stripe texture, Accent One highlight)
+    rect(0, 0, 1210, 95, C.mid);
+    for (var sx = -70; sx < 1300; sx += 44) path("M" + sx + ",0 L" + (sx + 5) + ",0 L" + (sx - 61) + ",95 L" + (sx - 66) + ",95 Z", { fill: C.stripe });
+    text("Breaker Slot Program: Board Summary", 47, 50, 29, { font: FB, color: C.white });
+    rect(47, 60, 44, 4, C.neon);
+    text("Status as of " + m.generated.dateText, 47, 85, 14, { color: C.pale });
+    var onTrack = m.statusWord === "ON TRACK";
+    rrect(981, 29, 183, 39, 8, { fill: onTrack ? C.neon : C.red });
+    text(m.statusWord, 1072.5, 54, 17, { font: FB, color: onTrack ? C.mid : C.white, align: "center" });
 
     // ---- intro
     var il = wrap(m.boardIntro, 14, 1118, F);
@@ -991,27 +1003,27 @@
     // ---- KPI cards
     var k = m.kpis;
     var cards = [
-      { big: String(k.total), l1: "Total breakers", l2: k.mfrText, accent: C.blue },
-      { big: String(k.committed), l1: "Committed / in review", l2: k.committedPct + "% of program", accent: C.blue },
-      { big: String(k.active), l1: "Active requests", l2: k.approvedCount + " approved, " + k.reviewCount + " in review", accent: C.blue },
-      { big: m.fmtM(k.totalVal), l1: "Est. project value", l2: m.fmtM(k.approvedVal) + " approved + " + m.fmtM(k.reviewVal) + " review", accent: C.blue },
-      { big: m.fmtM(k.net.total), l1: "Potential net income", l2: k.baseLabel, accent: C.green },
+      { big: String(k.total), l1: "Total breakers", l2: k.mfrText, accent: C.one },
+      { big: String(k.committed), l1: "Committed / in review", l2: k.committedPct + "% of program", accent: C.one },
+      { big: String(k.active), l1: "Active requests", l2: k.approvedCount + " approved, " + k.reviewCount + " in review", accent: C.one },
+      { big: m.fmtM(k.totalVal), l1: "Est. project value", l2: m.fmtM(k.approvedVal) + " approved + " + m.fmtM(k.reviewVal) + " review", accent: C.one },
+      { big: m.fmtM(k.net.total), l1: "Potential net income", l2: k.baseLabel, accent: C.neon },
     ];
     cards.forEach(function (c, i) {
       var x = 47 + i * 226.5, y = 177, w = 211, h = 98;
-      rrect(x, y, w, h, 8, { fill: C.card });
-      rect(x, y + 1, 4, h - 2, c.accent);
+      rect(x, y, w, h, C.card);
+      rect(x, y, w, 5, c.accent);
       var bigSize = 38; while (tw(c.big, bigSize, FB) > w - 40 && bigSize > 20) bigSize -= 2;
-      text(c.big, x + 20, y + 49, bigSize, { font: FB, color: C.navy });
-      text(c.l1, x + 20, y + 71, 14, { font: FB, color: C.navy });
+      text(c.big, x + 20, y + 52, bigSize, { font: FB, color: C.heading });
+      text(c.l1, x + 20, y + 73, 14, { font: FB, color: C.heading });
       var sub = c.l2, ss = 12; while (tw(sub, ss) > w - 30 && ss > 8) ss -= 0.5;
-      text(sub, x + 20, y + 88, ss, { color: C.mute });
+      text(sub, x + 20, y + 90, ss, { color: C.mute });
     });
 
     // ---- panels
     function panel(x, y, w, h, title) {
-      rrect(x, y, w, h, 10, { fill: C.white, stroke: C.border, sw: 1.5 });
-      text(title, x + 15, y + 26, 15, { font: FB, color: C.navy });
+      rrect(x, y, w, h, 8, { fill: C.white, stroke: C.border, sw: 1.5 });
+      text(title, x + 15, y + 26, 15, { font: FB, color: C.heading });
     }
     var STAT = [["Available", m.counts["Available"], C.grey], ["Pending Reservation", m.counts["Pending Reservation"], C.green], ["Pending Review", m.counts["Pending Review"], C.orange], ["Reserved", m.counts["Reserved"], C.navy]]
       .filter(function (s) { return s[1] > 0; });
