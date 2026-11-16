@@ -87,6 +87,12 @@
     .legend { display:flex; gap:14px; flex-wrap:wrap; margin-bottom:12px; }
     .legend-item { display:flex; align-items:center; gap:5px; font-size:10px; color:#4D6680; }
     .legend-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+    .ms-box { background:#EEF3FC; border:1.5px solid #D4DCE6; border-radius:8px; padding:10px 14px; min-height:62px; }
+    .ms-row { display:flex; justify-content:space-between; align-items:baseline; gap:10px; font-size:12px; color:#334155; }
+    .ms-row + .ms-row { margin-top:5px; }
+    .ms-row .ms-k { color:#4D6680; }
+    .ms-row .ms-v { font-weight:700; color:#002D59; white-space:nowrap; }
+    .ms-note { font-size:10px; color:#94A3B8; margin-top:6px; line-height:1.4; }
   </style>
 </head>
 <body>
@@ -121,6 +127,22 @@
     const QUEUE_STATUSES = ["Pending Review", "Pending Reservation"];
 
     function colMap(cvs) { const m={}; cvs.forEach(c=>{m[c.id]=c.text;}); return m; }
+
+    /* ── Milestone dates (WESCO Slot Reservation Framework Agreement) ──
+       30% customer payment → Finalized Tech Details Due (this date also triggers
+                              our 20% payment to Wesco)
+       70% customer payment → Delivery Date
+       Both come from each selected breaker in Monday.com; when several breakers
+       are selected the EARLIEST date controls. */
+    const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const validIso = s => /^\d{4}-\d{2}-\d{2}/.test(s||"");
+    const fmtDate = iso => {
+      if (!validIso(iso)) return "TBD";
+      const [y,m,d] = iso.slice(0,10).split("-").map(Number);
+      return `${MON[m-1]} ${d}, ${y}`;
+    };
+    const earliest = list => { const v = list.filter(validIso).map(s=>s.slice(0,10)).sort(); return v[0]||""; };
+    const distinctCount = list => new Set(list.filter(validIso).map(s=>s.slice(0,10))).size;
 
     const statusStyle = (status) => {
       if (status==="Available")           return { color:"#1A9B5A", bg:"#DCFCE7", label:"Available" };
@@ -161,11 +183,11 @@
       const [addedLineIds,     setAddedLineIds]      = useState([]);
       const [pickerValue,      setPickerValue]       = useState("");
       const [selectedIds,      setSelectedIds]       = useState([]);
-      const [submittedSummary, setSubmittedSummary]  = useState({ lines:"", count:0 });
+      const [submittedSummary, setSubmittedSummary]  = useState({ lines:"", count:0, m30:"", m70:"" });
 
       const [form, setForm] = useState({
         projectName:"", clientName:"", requesterName:"", requesterEmail:"",
-        opportunityNumber:"", estimatedValue:"", breakersEnable:"", dropDeadDate:"", notes:"",
+        opportunityNumber:"", estimatedValue:"", breakersEnable:"", notes:"",
       });
       const [submitting,  setSubmitting]  = useState(false);
       const [submitErr,   setSubmitErr]   = useState("");
@@ -187,7 +209,12 @@
             const cols = colMap(item.column_values);
             const subs = (item.subitems||[]).map(si => {
               const sc = colMap(si.column_values);
-              return { id:si.id, name:si.name, status:sc["status"]||"", voltage:sc["dropdown_mm65b542"]||"", manufacturer:sc["dropdown_mm65c7mt"]||"", deliveryDate:sc["date_mm65h7tw"]||"" };
+              return {
+                id:si.id, name:si.name, status:sc["status"]||"", voltage:sc["dropdown_mm65b542"]||"",
+                manufacturer:sc["dropdown_mm65c7mt"]||"",
+                deliveryDate:sc["date_mm65h7tw"]||"",   // 70% milestone
+                techDate:sc["date_mm65psxm"]||"",       // 30% milestone (Finalized Tech Details Due)
+              };
             });
             sbl[item.id] = subs;
             const selectableCount = subs.filter(s=>!LOCKED_STATUSES.includes(s.status)).length;
@@ -230,14 +257,22 @@
       const lineSummary = linesWithSelection.map(l=>l.name).join(", ");
       const lineOptionLabel = l => `Line ${String(l.poLineNum).padStart(2,"0")} — ${l.voltage}kV ${l.manufacturer} — Delivery ${l.deliveryDate} — ${l.selectableCount} of ${l.totalCount} selectable`;
 
+      /* ── Auto-populated milestone dates from the selected breakers ── */
+      const selectedUnits = allSubitems.filter(s=>selectedIds.includes(s.id));
+      const m30List = selectedUnits.map(s=>s.techDate);
+      const m70List = selectedUnits.map(s=>s.deliveryDate);
+      const milestone30 = earliest(m30List);
+      const milestone70 = earliest(m70List);
+
       const isValid = form.projectName.trim()&&form.clientName.trim()&&
         form.requesterName.trim()&&isValidEmail(form.requesterEmail)&&
         form.opportunityNumber.trim()&&form.estimatedValue&&form.breakersEnable&&
-        form.dropDeadDate&&selectedIds.length>0;
+        selectedIds.length>0;
 
       /* ── Submit — everything (identity lookup, live collision check, item
          creation, subitem status updates) happens server-side in the proxy.
-         The client only sends the raw submission and displays the result. ── */
+         The client only sends the raw submission and displays the result.
+         Milestone dates are recomputed by the proxy from the selected units. ── */
       const handleSubmit = async () => {
         if (!isValid) { setSubmitErr("Please complete all required fields, use a valid @"+ALLOWED_EMAIL_DOMAIN+" email, and select at least one breaker unit."); return; }
         setSubmitErr(""); setSubmitting(true);
@@ -250,7 +285,9 @@
             opportunityNumber:  form.opportunityNumber,
             estimatedValue:     parseFloat(form.estimatedValue)||0,
             breakersEnable:     form.breakersEnable,
-            dropDeadDate:       form.dropDeadDate,
+            // Informational only — the proxy recomputes these from Monday.
+            milestone30Date:    milestone30,
+            milestone70Date:    milestone70,
             // Backward compat: poLineId = first line with a selection.
             poLineId:           linesWithSelection[0]?.id || "",
             poLineIds:          linesWithSelection.map(l=>l.id),
@@ -282,7 +319,7 @@
             return updated;
           });
 
-          setSubmittedSummary({ lines:lineSummary, count:selectedIds.length });
+          setSubmittedSummary({ lines:lineSummary, count:selectedIds.length, m30:milestone30, m70:milestone70 });
           setWasQueued(!!result.wasQueued);
           setCreatedItem({ url: result.itemUrl });
           setScreen("success");
@@ -291,7 +328,7 @@
       };
 
       const reset = () => {
-        setForm({ projectName:"", clientName:"", requesterName:"", requesterEmail:"", opportunityNumber:"", estimatedValue:"", breakersEnable:"", dropDeadDate:"", notes:"" });
+        setForm({ projectName:"", clientName:"", requesterName:"", requesterEmail:"", opportunityNumber:"", estimatedValue:"", breakersEnable:"", notes:"" });
         setAddedLineIds([]); setPickerValue(""); setSelectedIds([]); setSubmitErr(""); setCreatedItem(null); setWasQueued(false);
       };
 
@@ -356,6 +393,8 @@
                 ["Opportunity #",    form.opportunityNumber],
                 ["PO Line(s)",       submittedSummary.lines||"—"],
                 ["Breakers Selected",`${submittedSummary.count} unit${submittedSummary.count!==1?"s":""}`],
+                ["30% Milestone (Tech Details)", fmtDate(submittedSummary.m30)],
+                ["70% Milestone (Delivery)",     fmtDate(submittedSummary.m70)],
                 ...(form.notes.trim() ? [["Notes", form.notes.trim()]] : []),
                 ["Requester",        form.requesterName ? `${form.requesterName} (${form.requesterEmail})` : "—"],
               ].map(([k,v])=>(
@@ -470,16 +509,28 @@
 
               <div className="g2" style={{ marginBottom:14 }}>
                 <div>
-                  <label className="bmcd-lbl">Drop-Dead Customer PO Release Date<span className="bmcd-req">*</span></label>
-                  <input type="date" value={form.dropDeadDate} onChange={e=>setForm(f=>({...f,dropDeadDate:e.target.value}))} className="std-inp"/>
-                </div>
-                <div>
                   <label className="bmcd-lbl">Do the Breakers Enable the Project?<span className="bmcd-req">*</span></label>
                   <select value={form.breakersEnable} onChange={e=>setForm(f=>({...f,breakersEnable:e.target.value}))} className="std-inp">
                     <option value="">Select…</option>
                     <option value="Yes">Yes — project cannot proceed without these breakers</option>
                     <option value="No">No — net new purchases could support the schedule</option>
                   </select>
+                </div>
+                <div>
+                  <label className="bmcd-lbl">Customer Payment Milestones (auto)</label>
+                  <div className="ms-box">
+                    {selectedIds.length===0 ? (
+                      <div style={{ fontSize:12, color:"#94A3B8", lineHeight:1.5 }}>Select breakers in Step 02 — the 30% and 70% milestone dates populate automatically from the selected units.</div>
+                    ) : (
+                      <>
+                        <div className="ms-row"><span className="ms-k">30% — Finalized Tech Details Due</span><span className="ms-v">{fmtDate(milestone30)}</span></div>
+                        <div className="ms-row"><span className="ms-k">70% — Delivery Date</span><span className="ms-v">{fmtDate(milestone70)}</span></div>
+                        {(distinctCount(m30List)>1 || distinctCount(m70List)>1) && (
+                          <div className="ms-note">Selected units have different dates — the earliest controls.</div>
+                        )}
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -536,6 +587,15 @@
                     else{bg="#E6F9EE";bc="#6DD19A";color="#1A9B5A";msg=`${selectedIds.length} unit${selectedIds.length!==1?"s":""} selected across ${linesWithSelection.length} PO line${linesWithSelection.length!==1?"s":""}.${hasQueueItems?" Some are in queue — you will be placed in line for committee review.":""}`;}
                     return <div style={{ background:bg, border:`1px solid ${bc}`, borderRadius:8, padding:"9px 14px", marginBottom:12, fontSize:12, color, fontWeight:500 }}>{msg}</div>;
                   })()}
+
+                  {/* Milestone summary for the selection */}
+                  {selectedIds.length>0 && (
+                    <div className="ms-box" style={{ marginBottom:12 }}>
+                      <div className="ms-row"><span className="ms-k">30% customer payment — Finalized Tech Details Due</span><span className="ms-v">{fmtDate(milestone30)}</span></div>
+                      <div className="ms-row"><span className="ms-k">70% customer payment — Delivery Date</span><span className="ms-v">{fmtDate(milestone70)}</span></div>
+                      <div className="ms-note">Per the WESCO Slot Reservation Framework Agreement. The Finalized Tech Details Due date also triggers BMcD's 20% milestone payment to Wesco, so the customer's 30% must be in hand by then. Dates come from the selected breakers{(distinctCount(m30List)>1||distinctCount(m70List)>1)?"; the earliest date across the selection controls":""}.</div>
+                    </div>
+                  )}
 
                   {hasQueueItems && (
                     <div className="queue-notice">
@@ -605,7 +665,7 @@
                                   <div style={{ flex:1 }}>
                                     <div style={{ fontWeight:600, color:"#002D59", fontSize:13 }}>{b.name}</div>
                                     <div style={{ fontSize:11, color:"#94A3B8", marginTop:1 }}>
-                                      {[b.voltage&&`${b.voltage}kV`, b.manufacturer, b.deliveryDate&&`Delivery: ${b.deliveryDate}`].filter(Boolean).join(" · ")}
+                                      {[b.voltage&&`${b.voltage}kV`, b.manufacturer, `30%: ${fmtDate(b.techDate)}`, `70%: ${fmtDate(b.deliveryDate)}`].filter(Boolean).join(" · ")}
                                     </div>
                                   </div>
                                   <span style={{ fontSize:10, fontWeight:700, color:ss.color, background:ss.bg, padding:"2px 8px", borderRadius:20, flexShrink:0, alignSelf:"center" }}>{ss.label}</span>
