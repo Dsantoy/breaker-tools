@@ -267,7 +267,7 @@
       if (isNaN(ln) && u.parentId && slotById[u.parentId]) ln = slotById[u.parentId].poLineN;
       return {
         id: String(u.id), name: u.name, status: u.status || "Available", voltage: u.voltage, mfr: u.mfr,
-        opp: (u.opp || "").trim(), line: ln, techDue: dn(u.techDue),
+        opp: (u.opp || "").trim(), line: ln, techDue: dn(u.techDue), delivery: dn(u.delivery),
       };
     });
     var unitById = {};
@@ -299,7 +299,7 @@
         id: r.id, opp: r.opp || r.name, project: r.project || "", client: r.client || "",
         qty: num(r.qty), value: num(r.value), dropDead: null, status: r.status, cat: cat,
         breakerIds: (r.breakerIds || []).map(String), line: slot ? slot.poLineN : null,
-        created: dn(r.createdAt), updated: dn(r.updatedAt), reviewedBy: r.reviewedBy || "",
+        created: dn(r.createdAt), updated: dn(r.updatedAt), reviewedBy: r.reviewedBy || "", requester: r.requester || "",
       };
       rq.units = rq.breakerIds.map(function (id) { return unitById[id]; }).filter(Boolean);
       // The request's key date = earliest Finalized Tech Details Due among its breaker units
@@ -513,9 +513,10 @@
     var pipeline = active.map(function (r) {
       var ln = uniq(r.units.map(function (u) { return u.line; }));
       if (!ln.length && r.line != null) ln = [r.line];
-      var po = r.dropDead == null ? "" : fmtShort(r.dropDead, T) + (r.dropDead < T && r.cat === "approved" && poOpen(r) ? " (passed)" : "");
+      var dl = r.units.map(function (u) { return u.delivery; }).filter(function (x) { return x != null; });
+      var po = dl.length ? fmtShort(Math.min.apply(null, dl), T) : "";
       return {
-        opp: r.opp, name: r.proj + " / " + r.customer, line: ln.join(", "), qty: r.qty, value: fmtM(r.value), po: po,
+        opp: r.opp, name: r.proj + " / " + r.customer, requester: r.requester, line: ln.join(", "), qty: r.qty, value: fmtM(r.value), po: po,
         status: r.cat === "approved" ? "Approved" : "Under review",
         pastDue: pastDue.indexOf(r) >= 0,
       };
@@ -789,8 +790,8 @@
     kids.push(para(fl, { before: 200, after: 80 }));
 
     kids.push(heading("Request Pipeline"));
-    kids.push(table([1296, 3456, 576, 576, 1008, 1584, 1440], ["Request", "Project / Customer", "Line", "Qty", "Est. Value", "Tech Details Due", "Status"],
-      m.pipeline.map(function (p) { return [p.opp, p.name, p.line, String(p.qty), p.value, p.po, p.status]; }),
+    kids.push(table([1150, 2700, 1350, 560, 520, 900, 1500, 1256], ["Request", "Project / Customer", "Requester", "Line", "Qty", "Est. Value", "Delivery Date", "Status"],
+      m.pipeline.map(function (p) { return [p.opp, p.name, p.requester || "", p.line, String(p.qty), p.value, p.po, p.status]; }),
       { fills: m.pipeline.map(function (p) { return p.pastDue ? "F8D7DA" : undefined; }) }));
 
     kids.push(heading("Key Observations"));
@@ -942,6 +943,8 @@
         var wa = wMax * c.approved / maxV, wr = wMax * c.review / maxV;
         if (wa > 0) rect(x0, y, wa, 18, C.green);
         if (wr > 0) rect(x0 + wa, y, wr, 18, C.orange);
+        if (wa > 0 && wa >= tw(m.fmtM(c.approved), 10, FB) + 6) text(m.fmtM(c.approved), x0 + wa / 2, y + 12.5, 10, { font: FB, color: C.white, align: "center" });
+        if (wr > 0 && wr >= tw(m.fmtM(c.review), 10, FB) + 6) text(m.fmtM(c.review), x0 + wa + wr / 2, y + 12.5, 10, { font: FB, color: C.white, align: "center" });
         text(m.fmtM(tot), x0 + wa + wr + 6, y + 12.5, 10, { font: FB, color: C.navy });
       });
       var ly = 524;
@@ -978,7 +981,12 @@
         var x = x0;
         [[c.avail, C.grey], [c.pres, C.green], [c.pr, C.orange], [c.res, C.navy]].forEach(function (seg) {
           var w = wMax * seg[0] / maxT;
-          if (w > 0) { rect(x, y, w, 24, seg[1]); x += w; }
+          if (w > 0) {
+            rect(x, y, w, 24, seg[1]);
+            var lbl = String(seg[0]);
+            if (w >= tw(lbl, 12, FB) + 6) text(lbl, x + w / 2, y + 17, 12, { font: FB, color: seg[1] === C.grey ? C.navy : C.white, align: "center" });
+            x += w;
+          }
         });
         text(String(c.total), x + 8, y + 17, 12, { font: FB, color: C.navy });
       });
