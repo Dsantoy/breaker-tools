@@ -106,6 +106,12 @@
 
     /* History cards */
     .hist-card { background:#fff; border-radius:10px; border:1px solid #D4DCE6; padding:13px 18px; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between; opacity:.88; }
+    .hist-card.clickable { cursor:pointer; transition:box-shadow .15s, opacity .15s, transform .15s; }
+    .hist-card.clickable:hover, .hist-card.clickable:focus-visible { opacity:1; box-shadow:0 3px 14px rgba(0,45,89,.14); outline:none; transform:translateY(-1px); }
+    .hist-chevron { font-size:20px; color:#94A3B8; line-height:1; }
+    .detail-box { background:#fff; border-radius:14px; max-width:680px; width:100%; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,.25); }
+    .detail-close { background:none; border:none; font-size:26px; line-height:1; color:#94A3B8; cursor:pointer; padding:0 4px; }
+    .detail-close:hover { color:#002D59; }
     .hist-opp  { font-size:13px; font-weight:700; color:#002D59; }
     .hist-meta { font-size:11px; color:#94A3B8; margin-top:2px; }
 
@@ -1097,6 +1103,15 @@
       const [syncMsg,     setSyncMsg]     = useState("");
       const [reporting,   setReporting]   = useState(false);
       const [reportMsg,   setReportMsg]   = useState(null);
+      const [selectedHist, setSelectedHist] = useState(null);
+
+      /* Close decision-detail modal with Escape */
+      useEffect(() => {
+        if (!selectedHist) return;
+        const onKey = e => { if (e.key==="Escape") setSelectedHist(null); };
+        window.addEventListener("keydown", onKey);
+        return () => window.removeEventListener("keydown", onKey);
+      }, [selectedHist]);
 
       /* ── Login (allowlist check, no Monday credential involved) ── */
       const handleSetup = async () => {
@@ -1526,17 +1541,24 @@
                 <div className="section-row">
                   <div className="section-title">Recent Decisions</div>
                   <span className="count-pill gray">{history.length} record{history.length!==1?"s":""}</span>
+                  <span style={{ fontSize:11, color:"#94A3B8" }}>— click an entry to view full details</span>
                 </div>
                 {history.map(req=>(
-                  <div key={req.id} className="hist-card"
+                  <div key={req.id} className="hist-card clickable"
+                    role="button" tabIndex={0}
+                    onClick={()=>setSelectedHist(req)}
+                    onKeyDown={e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); setSelectedHist(req); } }}
                     style={{ borderLeft:`4px solid ${req.status==="Done"?"#1A9B5A":"#DC2626"}` }}>
                     <div>
                       <div className="hist-opp">{req.opportunityNum||req.name}</div>
                       <div className="hist-meta">{req.projectName} &mdash; {req.clientName} &mdash; {req.breakerIds.length} unit{req.breakerIds.length!==1?"s":""}</div>
                     </div>
-                    <span className={`pill ${req.status==="Done"?"pill-approved":"pill-denied"}`}>
-                      {req.status==="Done" ? "Approved" : "Denied"}
-                    </span>
+                    <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                      <span className={`pill ${req.status==="Done"?"pill-approved":"pill-denied"}`}>
+                        {req.status==="Done" ? "Approved" : "Denied"}
+                      </span>
+                      <span className="hist-chevron">›</span>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1572,6 +1594,82 @@
               </div>
             </div>
           )}
+
+          {/* Decision detail modal (read-only) */}
+          {selectedHist && (() => {
+            const h = selectedHist;
+            const approvedH = h.status==="Done";
+            const brs = h.breakers || [];
+            const fmtDT = v => { if(!v) return ""; const d=new Date(v); return isNaN(d)?String(v):d.toLocaleString(); };
+            const reason   = h.denialReason || h.denyReason || h.reason || "";
+            const reviewer = h.reviewedBy || h.reviewer || "";
+            const decided  = fmtDT(h.reviewedAt || h.decidedAt || h.updatedAt);
+            const rows = [
+              ["Requester",          h.requesterName||"—"],
+              ["Est. Project Value", h.estimatedValue?`$${Number(h.estimatedValue).toLocaleString()}`:"—"],
+              ["Breakers Enable",    h.breakersEnable||"—"],
+              ["Drop-Dead Date",     h.dropDeadDate||"—"],
+              ["Qty Requested",      h.quantityNeeded!=null?`${h.quantityNeeded} unit${h.quantityNeeded!==1?"s":""}`:"—"],
+              ["Units Selected",     `${(h.breakerIds||[]).length} unit${(h.breakerIds||[]).length!==1?"s":""}`],
+              ["Opportunity #",      h.opportunityNum||"—"],
+              ["Capacity Check",     h.capacityCheck||"—"],
+              ["Decision",           approvedH?"Approved":"Denied"],
+              ...(reviewer ? [["Reviewed By", reviewer]] : []),
+              ...(decided  ? [["Decided",     decided]]  : []),
+            ];
+            return (
+              <div className="modal-overlay" onClick={()=>setSelectedHist(null)}>
+                <div className="detail-box" role="dialog" aria-modal="true" onClick={e=>e.stopPropagation()}
+                  style={{ borderTop:`4px solid ${approvedH?"#1A9B5A":"#DC2626"}` }}>
+                  <div className="req-card-top">
+                    <div>
+                      <div className="req-opp">{h.opportunityNum||h.name}</div>
+                      <div className="req-proj">{h.projectName} &mdash; <span className="req-client">{h.clientName}</span></div>
+                    </div>
+                    <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                      <span className={`pill ${approvedH?"pill-approved":"pill-denied"}`}>{approvedH?"Approved":"Denied"}</span>
+                      <button className="detail-close" onClick={()=>setSelectedHist(null)} aria-label="Close">&times;</button>
+                    </div>
+                  </div>
+                  <div className="meta-grid">
+                    {rows.map(([k,v])=>(
+                      <div key={k}><div className="meta-lbl">{k}</div><div className="meta-val">{v}</div></div>
+                    ))}
+                  </div>
+                  {!approvedH && reason && (
+                    <div className="breaker-section">
+                      <div className="breaker-lbl">Denial Reason</div>
+                      <div style={{ fontSize:13, color:"#334155", lineHeight:1.5 }}>{reason}</div>
+                    </div>
+                  )}
+                  <div className="breaker-section">
+                    <div className="breaker-lbl">Requested Breaker Units</div>
+                    {brs.length===0 ? (
+                      <div style={{ fontSize:12, color:"#94A3B8" }}>No breaker details available</div>
+                    ) : brs.map(b=>{
+                      const isAvail=b.status==="Available", isResv=b.status==="Reserved";
+                      return (
+                        <div key={b.id} className={`breaker-row ${isAvail?"avail":isResv?"reserved-state":"unknown"}`}>
+                          <div style={{ flex:1 }}>
+                            <div className="breaker-name">{b.name}</div>
+                            <div className="breaker-meta-text">
+                              {[b.voltage&&`${b.voltage}kV`, b.manufacturer, b.deliveryDate&&`Delivery: ${b.deliveryDate}`].filter(Boolean).join(" · ")}
+                            </div>
+                          </div>
+                          <span className={`b-pill ${isAvail?"g":isResv?"r":"u"}`}>{b.status||"Unknown"}</span>
+                        </div>
+                      );
+                    })}
+                    <div style={{ fontSize:10, color:"#94A3B8", marginTop:6 }}>Unit status shown is the current status in Monday.com.</div>
+                  </div>
+                  <div className="action-bar">
+                    <button className="modal-cancel" style={{ flex:"0 0 auto" }} onClick={()=>setSelectedHist(null)}>Close</button>
+                    <a href={`https://burnsmcd-inc.monday.com/boards/${REQUESTS_BOARD_ID}`} target="_blank" rel="noreferrer" className="btn-view-link">View in Monday.com →</a>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       );
     }
